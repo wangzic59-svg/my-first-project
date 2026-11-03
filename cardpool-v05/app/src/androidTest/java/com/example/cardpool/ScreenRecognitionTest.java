@@ -19,18 +19,19 @@ public class ScreenRecognitionTest {
  private String asset(String name)throws Exception{try(InputStream in=tests.getAssets().open("fixtures/"+name)){ByteArrayOutputStream out=new ByteArrayOutputStream();byte[] b=new byte[4096];int n;while((n=in.read(b))!=-1)out.write(b,0,n);return out.toString("UTF-8");}}
  @Test public void ocrAccuracyOnSyntheticScreenshots()throws Exception{
   CaptureProfile profile=new CaptureProfile(asset("profile.json"));JSONArray expected=new JSONArray(asset("expected.json"));GameState game=new GameState();game.heroes.put("ahri",new GameState.Hero("ahri","Ahri",4,10));
-  int correct=0,total=0,identity=0,semantic=0;
+  int correct=0,total=0,identity=0,semantic=0,highConfidence=0;
   try(ScreenRecognizer engine=new ScreenRecognizer(target)){
    for(int i=0;i<expected.length();i++){
     JSONObject row=expected.getJSONObject(i);Bitmap image;try(InputStream in=tests.getAssets().open("fixtures/"+row.getString("file"))){image=BitmapFactory.decodeStream(in);}
     ObservationGate.Frame f=engine.read(image,profile,game,1000+i);image.recycle();if(f.player==row.getInt("player"))identity++;
-    for(String key:new String[]{"gold","level","hp"}){total++;if(f.fields.containsKey(key)&&f.fields.get(key).text.equals(row.getString(key)))correct++;}
+    ObservationGate gate=new ObservationGate();gate.accepted(f);f.time++;Map<String,ObservationGate.Token> confirmed=gate.accepted(f);
+    for(String key:new String[]{"gold","level","hp"}){if(confirmed.containsKey(key))highConfidence++;total++;if(f.fields.containsKey(key)&&f.fields.get(key).text.equals(row.getString(key)))correct++;}
     for(String key:new String[]{"shop.0","board.0.hero","board.0.star","board.0.equipment"})if(f.fields.containsKey(key))semantic++;
    }
   }
-  String report="Synthetic numeric exact accuracy="+correct+"/"+total+"; identity="+identity+"/"+expected.length()+"; semantic fields="+semantic+"/"+(expected.length()*4)+". No real-game accuracy claim.";
+  String report="Synthetic numeric exact accuracy="+correct+"/"+total+"; confidence-gated stable scalar fields="+highConfidence+"/"+total+"; identity="+identity+"/"+expected.length()+"; semantic fields="+semantic+"/"+(expected.length()*4)+". No real-game accuracy claim.";
   android.util.Log.i("OCR_ACCURACY",report);try(FileOutputStream out=new FileOutputStream(new File(target.getExternalFilesDir(null),"ocr-accuracy.txt"))){out.write(report.getBytes(StandardCharsets.UTF_8));}
-  assertTrue(report,correct>=total*.9);assertTrue(report,identity>=expected.length()*.9);assertTrue(report,semantic>=expected.length()*4*.8);
+  assertTrue(report,correct>=total*.9);assertTrue(report,highConfidence>=total*.8);assertTrue(report,identity>=expected.length()*.9);assertTrue(report,semantic>=expected.length()*4*.8);
  }
  @Test public void eightPlayerUpdatesReachActualOverlay()throws Exception{
   Instrumentation ins=InstrumentationRegistry.getInstrumentation();Activity activity=ins.startActivitySync(new Intent(target,MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));

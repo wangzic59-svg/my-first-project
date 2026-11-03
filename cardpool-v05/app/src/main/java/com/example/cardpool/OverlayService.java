@@ -44,7 +44,7 @@ public class OverlayService extends Service implements DataManager.Listener {
         else {for(int i=0;i<8;i++){final int player=i;LinearLayout row=new LinearLayout(this);content.addView(row);int count=0;for(GameState.Holding h:s.players[i].units)if(h.hero.equals(s.target))count+=h.copies();
             button(row,"P"+(i+1)+" · "+count+"张",()->Editors.player(this,manager,player));button(row,"−1★",()->{if(Editors.writable(this,manager))manager.adjust(player,s.target,-1);});button(row,"+1★",()->{if(Editors.writable(this,manager))manager.adjust(player,s.target,1);});}
             content.addView(text("±只修改目标英雄的一星无装备记录；点玩家按钮可编辑等级、金币、血量、各英雄星级及装备。",11));}
-        content.addView(text("观察数据与概率预测；非真实商店结果",11));
+        content.addView(text("已观察商店按截图记录；刷新预测仅为估算",11));
     }
     @Override public void onDestroy(){renderedRevision=-1;handler.removeCallbacksAndMessages(null);if(manager!=null)manager.remove(this);if(widget!=null){try{wm.removeView(widget);}catch(Exception ignored){}}super.onDestroy();}
 }

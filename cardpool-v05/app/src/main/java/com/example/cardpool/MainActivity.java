@@ -31,7 +31,7 @@ public class MainActivity extends Activity implements DataManager.Listener {
     @Override protected void onPause(){handler.removeCallbacks(ageTick);super.onPause();}
     @Override public void changed(){handler.post(this::render);}
     private void render(){if(body==null)return;GameState s=manager.snapshot();body.removeAllViews();
-        status.setText(s.source+" · 修订 "+s.revision+(s.updatedAt==0?"":" · "+DateFormat.getTimeInstance().format(new Date(s.updatedAt)))+"\n所有结果来自记录与规则估算，不是游戏实际商店。");
+        status.setText(s.source+" · 修订 "+s.revision+(s.updatedAt==0?"":" · "+DateFormat.getTimeInstance().format(new Date(s.updatedAt)))+"\n已观察商店见采集页；概率是估算，不是下一轮真实商店。");
         action("选择目标英雄（当前："+(s.heroes.containsKey(s.target)?s.heroes.get(s.target).name:"未选择")+"）",()->Editors.chooseHero(this,manager));
         if(tab==0){
             body.addView(text("全场八人 · 星级折算 1★=1 / 2★=3 / 3★=9 张\n下方 ± 只增减目标英雄的一星无装备记录；完整编辑可修改其他星级及装备。",13));
