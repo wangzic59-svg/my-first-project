@@ -1,0 +1,30 @@
+name: Build CardPool V0.5 APK
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'cardpool-v05/**'
+      - '.github/workflows/cardpool-v05.yml'
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: cardpool-v05
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: android-actions/setup-android@v3
+      - run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0' 'ndk;27.2.12479018'
+      - run: bash scripts/test.sh
+      - run: bash scripts/prepare_signing.sh
+      - run: ANDROID_NDK_HOME="$ANDROID_HOME/ndk/27.2.12479018" bash gradlew --no-daemon :app:assembleDebug :app:lintDebug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cardpool-v05-test-apk
+          path: cardpool-v05/app/build/outputs/apk/debug/app-debug.apk

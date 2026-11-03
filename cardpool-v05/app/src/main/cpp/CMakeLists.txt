@@ -1,0 +1,5 @@
+cmake_minimum_required(VERSION 3.22)
+project(cardpool LANGUAGES CXX)
+add_library(cardpool SHARED jni.cpp)
+target_compile_features(cardpool PRIVATE cxx_std_17)
+target_link_options(cardpool PRIVATE "-Wl,-z,max-page-size=16384")
