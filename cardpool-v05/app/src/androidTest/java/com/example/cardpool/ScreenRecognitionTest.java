@@ -12,12 +12,13 @@ import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import static org.junit.Assert.*;
+@org.junit.FixMethodOrder(org.junit.runners.MethodSorters.NAME_ASCENDING)
 @RunWith(AndroidJUnit4.class)
 public class ScreenRecognitionTest {
  private Context target,tests;
  @Before public void setup(){target=InstrumentationRegistry.getInstrumentation().getTargetContext();tests=InstrumentationRegistry.getInstrumentation().getContext();}
  private String asset(String name)throws Exception{try(InputStream in=tests.getAssets().open("fixtures/"+name)){ByteArrayOutputStream out=new ByteArrayOutputStream();byte[] b=new byte[4096];int n;while((n=in.read(b))!=-1)out.write(b,0,n);return out.toString("UTF-8");}}
- @Test public void ocrAccuracyOnSyntheticScreenshots()throws Exception{
+ @Test public void a_ocrAccuracyOnSyntheticScreenshots()throws Exception{
   CaptureProfile profile=new CaptureProfile(asset("profile.json"));JSONArray expected=new JSONArray(asset("expected.json"));GameState game=new GameState();game.heroes.put("ahri",new GameState.Hero("ahri","Ahri",4,10));
   int correct=0,total=0,identity=0,semantic=0,highConfidence=0;
   try(ScreenRecognizer engine=new ScreenRecognizer(target)){
@@ -33,7 +34,7 @@ public class ScreenRecognitionTest {
   android.util.Log.i("OCR_ACCURACY",report);try(FileOutputStream out=new FileOutputStream(new File(target.getExternalFilesDir(null),"ocr-accuracy.txt"))){out.write(report.getBytes(StandardCharsets.UTF_8));}
   assertTrue(report,correct>=total*.9);assertTrue(report,highConfidence>=total*.8);assertTrue(report,identity>=expected.length()*.9);assertTrue(report,semantic>=expected.length()*4*.8);
  }
- @Test public void eightPlayerUpdatesReachActualOverlay()throws Exception{
+ @Test public void b_eightPlayerUpdatesReachActualOverlay()throws Exception{
   Instrumentation ins=InstrumentationRegistry.getInstrumentation();Activity activity=ins.startActivitySync(new Intent(target,MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
   ins.getUiAutomation().executeShellCommand("appops set com.example.cardpool SYSTEM_ALERT_WINDOW allow").close();
   DataManager m=DataManager.get(target);ins.runOnMainSync(()->{m.simulation(false);m.mutate(s->{s.capture.autoMerge=true;for(int i=0;i<8;i++)s.capture.players[i].manualLocks.remove("gold");});target.startForegroundService(new Intent(target,OverlayService.class));});
@@ -45,10 +46,13 @@ public class ScreenRecognitionTest {
    }
   }finally{ins.runOnMainSync(()->{target.stopService(new Intent(target,OverlayService.class));activity.finish();});}
  }
- @Test public void deniedConsentCannotStartProjection()throws Exception{
+ @Test public void c_deniedConsentCannotStartProjection()throws Exception{
   Instrumentation ins=InstrumentationRegistry.getInstrumentation();target.getSharedPreferences("capture_profile",0).edit().putBoolean("configured",true).putString("json",asset("profile.json")).commit();
-  Activity activity=ins.startActivitySync(new Intent(target,MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
-  ins.runOnMainSync(()->target.startForegroundService(new Intent(target,CaptureService.class).setAction(CaptureService.START).putExtra("result",Activity.RESULT_CANCELED)));
+  MainActivity activity=(MainActivity)ins.startActivitySync(new Intent(target,MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+  ins.runOnMainSync(()->activity.onActivityResult(66,Activity.RESULT_CANCELED,null));
+  // A denied system result must never request a projection foreground service.
+  // Also fuzz the non-exported service via normal startService: it must stop without capture.
+  ins.runOnMainSync(()->target.startService(new Intent(target,CaptureService.class).setAction(CaptureService.START).putExtra("result",Activity.RESULT_CANCELED)));
   Thread.sleep(700);ins.waitForIdleSync();assertFalse(CaptureService.projectionActive);ins.runOnMainSync(activity::finish);
  }
 }
