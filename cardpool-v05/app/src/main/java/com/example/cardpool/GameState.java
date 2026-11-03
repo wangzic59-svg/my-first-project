@@ -8,7 +8,7 @@ public final class GameState implements Serializable {
     private static final long serialVersionUID = 5L;
     public int schema = 5;
     public CaptureData capture = new CaptureData();
-    public long revision = 0, updatedAt = 0;
+    public long revision = 0, updatedAt = 0, manualRevision = 0;
     public String source = "手动输入", season = "自定义赛季（请配置规则）", target = "";
     public boolean rosterComplete = false, independentSlots = false, legacyImported = false;
     public int slots = 5, refreshCost = 2, selectedPlayer = 0;

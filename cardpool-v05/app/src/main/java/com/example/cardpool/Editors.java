@@ -25,7 +25,7 @@ public final class Editors {
         ScrollView scroll=new ScrollView(c);scroll.addView(fields);
         AlertDialog d=new AlertDialog.Builder(c).setTitle(title).setView(scroll).setNegativeButton("取消",null).setPositiveButton("保存并实时同步",null).create();show(c,d);
         d.getButton(-1).setOnClickListener(v->{try{
-            m.mutate(current->{if(m.isSimulating()||current.revision!=start.revision)throw new IllegalArgumentException("数据已更新，请取消后重新打开编辑，避免覆盖新记录");mutation.apply(current);});d.dismiss();
+            m.mutate(current->{if(m.isSimulating()||current.manualRevision!=start.manualRevision)throw new IllegalArgumentException("数据已更新，请取消后重新打开编辑，避免覆盖新记录");mutation.apply(current);});d.dismiss();
         }catch(Exception ex){Toast.makeText(c,ex instanceof NumberFormatException?"请填写有效数字":ex.getMessage(),Toast.LENGTH_LONG).show();}});
     }
     public static void choosePlayer(Context c,DataManager m){String[] names=new String[8];for(int i=0;i<8;i++)names[i]="玩家 "+(i+1);AlertDialog d=new AlertDialog.Builder(c).setTitle("分析哪位玩家的商店？").setItems(names,(a,n)->m.mutate(s->s.selectedPlayer=n)).create();show(c,d);}

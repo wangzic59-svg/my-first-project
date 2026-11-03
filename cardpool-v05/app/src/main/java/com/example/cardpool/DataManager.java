@@ -30,7 +30,7 @@ public final class DataManager {
     public synchronized void remove(Listener l){listeners.remove(l);}
     private void notifyChanged(){for(Listener l:new ArrayList<>(listeners))l.changed();}
     public synchronized void mutate(Mutation mutation){
-        GameState next=(simulating?simulation:manual).copy();mutation.apply(next);next.validate();markManualLocks(simulating?simulation:manual,next);next.revision++;next.updatedAt=System.currentTimeMillis();
+        GameState next=(simulating?simulation:manual).copy();mutation.apply(next);next.validate();markManualLocks(simulating?simulation:manual,next);next.manualRevision++;next.revision++;next.updatedAt=System.currentTimeMillis();
         if(simulating)simulation=next;
         else {new DataSource.Manual().apply(next,next.revision);if(!prefs.edit().putString("state_v05_manual",GameState.encode(next)).commit())throw new IllegalStateException("保存失败，请重试");manual=next;}
         notifyChanged();
@@ -67,9 +67,9 @@ public final class DataManager {
                 p.values.put(key,new CaptureData.Value(t.text,t.confidence,frame.time));good++;
             }
             java.util.List<GameState.Holding> visible=new java.util.ArrayList<>();
-            for(Map.Entry<String,ObservationGate.Token> e:accepted.entrySet())if(e.getKey().matches("board\\.[0-9]+\\.hero")&&next.heroes.containsKey(e.getValue().text)){
+            for(Map.Entry<String,ObservationGate.Token> e:accepted.entrySet())if(e.getKey().matches("board\\.[0-9]+\\.hero")&&e.getValue().confidence>=ObservationGate.MIN&&next.heroes.containsKey(e.getValue().text)){
                 String prefix=e.getKey().substring(0,e.getKey().length()-4);ObservationGate.Token star=accepted.get(prefix+"star");
-                if(star!=null&&star.text.matches("[123]")){ObservationGate.Token equipment=accepted.get(prefix+"equipment");visible.add(new GameState.Holding(e.getValue().text,Integer.parseInt(star.text),1,equipment==null?"":equipment.text));}
+                if(star!=null&&star.confidence>=ObservationGate.MIN&&star.text.matches("[123]")){ObservationGate.Token equipment=accepted.get(prefix+"equipment");visible.add(new GameState.Holding(e.getValue().text,Integer.parseInt(star.text),1,equipment==null?"":equipment.text));}
             }
             if(!visible.isEmpty()){p.board.clear();p.board.addAll(visible);p.boardSeen=frame.time;}
             data.lastReview="玩家"+(frame.player+1)+" · 本帧字段 "+frame.fields.size()+" · 双帧高置信确认 "+good+"；低分/未稳定项未覆盖";

@@ -18,6 +18,7 @@ public class V06Test {
    ObservationGate.Frame frame=f(player,100+player,"gold",String.valueOf(20+player),.99);Map<String,ObservationGate.Token> accepted=new LinkedHashMap<>(frame.fields);accepted.put("board.0.hero",new ObservationGate.Token("a",.99));accepted.put("board.0.star",new ObservationGate.Token("1",.99));accepted.put("shop.0",new ObservationGate.Token("a",.99));m.observe(frame,accepted);
   }
   ok(main[0]==8&&overlay[0]==8,"eight player observations notify both surfaces");for(int i=0;i<8;i++)ok(m.snapshot().players[i].gold==20+i,"correct eight-way association");ok(m.snapshot().observed("a")==8,"board lower bounds count once, shop not held");
+  long manualRevision=m.snapshot().manualRevision;m.observe(f(7,999,"gold","80",.99),Collections.singletonMap("gold",new ObservationGate.Token("80",.99)));ok(m.snapshot().manualRevision==manualRevision,"live observations do not invalidate a manual edit dialog");
   m.mutate(s->s.players[0].gold=88);m.observe(f(0,1000,"gold","40",.99),Collections.singletonMap("gold",new ObservationGate.Token("40",.99)));ok(m.snapshot().players[0].gold==88,"manual correction locked");
   m.observe(f(1,1001,"gold","44",.4),Collections.singletonMap("gold",new ObservationGate.Token("44",.4)));ok(m.snapshot().players[1].gold==21,"low confidence cannot overwrite correct record");
   ObservationGate.Frame unknown=f(-1,1002,"gold","99",.99);m.observe(unknown,unknown.fields);ok(m.snapshot().players[0].gold==88,"unobserved player not invented");
