@@ -28,7 +28,8 @@ public final class CaptureControls {
  static Bitmap read(Activity a,Uri uri)throws IOException{
   BitmapFactory.Options options=new BitmapFactory.Options();options.inJustDecodeBounds=true;try(InputStream in=a.getContentResolver().openInputStream(uri)){BitmapFactory.decodeStream(in,null,options);}
   if(options.outWidth<=0||options.outHeight<=0||(long)options.outWidth*options.outHeight>20000000)throw new IOException("图片无效或超过2000万像素");
-  try(InputStream in=a.getContentResolver().openInputStream(uri)){Bitmap b=BitmapFactory.decodeStream(in);if(b==null)throw new IOException("不支持图片格式");return b;}
+  options.inJustDecodeBounds=false;options.inSampleSize=1;while((long)(options.outWidth/options.inSampleSize)*(options.outHeight/options.inSampleSize)>4000000)options.inSampleSize*=2;
+  try(InputStream in=a.getContentResolver().openInputStream(uri)){Bitmap b=BitmapFactory.decodeStream(in,null,options);if(b==null)throw new IOException("不支持图片格式");return b;}
  }
  public static void auto(Activity a,DataManager m){GameState s=m.snapshot();new AlertDialog.Builder(a).setTitle("自动合并高置信数值？").setMessage("仅金币/等级/血量在身份明确、连续两帧且置信分≥90%时自动更新。已有手动修正默认锁定；解锁后允许高置信识别更新。棋盘与装备只写观察层，不覆盖可能包含备战席的完整持牌。")
   .setNegativeButton("关闭自动合并",(d,n)->m.mutate(x->x.capture.autoMerge=false))

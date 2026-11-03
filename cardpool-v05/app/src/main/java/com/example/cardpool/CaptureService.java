@@ -48,11 +48,11 @@ public final class CaptureService extends Service {
    if(projection==null)throw new SecurityException("授权已失效，请重新授权");
    projection.registerCallback(new MediaProjection.Callback(){
     @Override public void onStop(){manager.captureStatus("系统已撤销屏幕捕获，需重新授权");stopSelf();}
-    @Override public void onCapturedContentResize(int w,int h){if(display!=null&&reader!=null&&(reader.getWidth()!=w||reader.getHeight()!=h))resize(w,h);}
+    @Override public void onCapturedContentResize(int w,int h){int[] size=CaptureDimensions.fit(w,h);if(display!=null&&reader!=null&&(reader.getWidth()!=size[0]||reader.getHeight()!=size[1]))resize(size[0],size[1]);}
    },main);
    DisplayMetrics dm=new DisplayMetrics();getSystemService(WindowManager.class).getDefaultDisplay().getRealMetrics(dm);density=dm.densityDpi;
-   createReader(dm.widthPixels,dm.heightPixels);
-   display=projection.createVirtualDisplay("AuthorizedCardPoolCapture",dm.widthPixels,dm.heightPixels,density,DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,reader.getSurface(),null,main);
+   int[] size=CaptureDimensions.fit(dm.widthPixels,dm.heightPixels);createReader(size[0],size[1]);
+   display=projection.createVirtualDisplay("AuthorizedCardPoolCapture",size[0],size[1],density,DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,reader.getSurface(),null,main);
    manager.captureStatus("正在识别授权画面 · OCR本地处理 · 连续两帧确认");
   }catch(Exception e){manager.captureStatus("识别未启动："+e.getMessage());stopSelf();}
   return START_NOT_STICKY;
