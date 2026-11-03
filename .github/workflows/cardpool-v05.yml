@@ -6,7 +6,7 @@ on:
       - 'cardpool-v05/**'
       - '.github/workflows/cardpool-v05.yml'
 permissions:
-  contents: write
+  contents: read
 jobs:
   build:
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
@@ -50,8 +50,20 @@ jobs:
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           script: |
-            cd cardpool-v05 && ANDROID_NDK_HOME="$ANDROID_HOME/ndk/27.2.12479018" bash gradlew --no-daemon :app:connectedDebugAndroidTest
-            adb pull /sdcard/Android/data/com.example.cardpool/files/ocr-accuracy.txt cardpool-v05/reports/ocr-accuracy.txt
+            # Gradle uninstalls test APKs on completion; app external files may disappear.
+            # Preserve real instrumentation OCR metrics from logcat instead of pulling a deleted file.
+            mkdir -p cardpool-v05/reports
+            set +e
+            (cd cardpool-v05 && ANDROID_NDK_HOME="$ANDROID_HOME/ndk/27.2.12479018" bash gradlew --no-daemon :app:connectedDebugAndroidTest)
+            test_status=$?
+            set -e
+            adb logcat -d -v brief -s OCR_ACCURACY:I '*:S' > cardpool-v05/reports/ocr-logcat.txt || true
+            grep -F 'Synthetic numeric exact accuracy=' cardpool-v05/reports/ocr-logcat.txt > cardpool-v05/reports/ocr-accuracy.txt || true
+            if [ ! -s cardpool-v05/reports/ocr-accuracy.txt ]; then
+              echo "OCR accuracy report missing from instrumentation logcat" >&2
+            fi
+            test "$test_status" -eq 0
+            test -s cardpool-v05/reports/ocr-accuracy.txt
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -61,14 +73,8 @@ jobs:
             cardpool-v05/app/build/outputs/androidTest-results/**
             cardpool-v05/app/build/reports/**
             cardpool-v05/reports/**
-      - name: Save Actions-built APK and measured OCR report
-        env:
-          TASK_BRANCH: ${{ github.head_ref || github.ref_name }}
+      - name: Verify build artifacts without publishing an APK to the repository
         run: |
-          cp app/build/outputs/apk/debug/app-debug.apk downloads/JCC_CardPool_0.6_actions.apk
-          sha256sum downloads/JCC_CardPool_0.6_actions.apk > downloads/V06_ACTIONS_SHA256SUMS
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add downloads/JCC_CardPool_0.6_actions.apk downloads/V06_ACTIONS_SHA256SUMS reports/ocr-accuracy.txt
-          git diff --cached --quiet || git commit -m 'Save Actions-built V0.6 APK and measured OCR results [skip ci]'
-          git push origin "HEAD:$TASK_BRANCH"
+          test -s app/build/outputs/apk/debug/app-debug.apk
+          test -s reports/ocr-accuracy.txt
+          sha256sum app/build/outputs/apk/debug/app-debug.apk > reports/V06_ACTIONS_SHA256SUMS
