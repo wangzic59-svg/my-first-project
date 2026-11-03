@@ -27,6 +27,8 @@ public class MainActivity extends Activity implements DataManager.Listener {
     TextView text(String s,int size){TextView t=new TextView(this);t.setText(s);t.setTextSize(size);t.setTextColor(Color.rgb(225,238,245));t.setPadding(8,12,8,12);return t;}
     void button(LinearLayout row,String s,Runnable run){Button b=new Button(this);b.setText(s);b.setTextSize(12);row.addView(b,new LinearLayout.LayoutParams(0,-2,1));b.setOnClickListener(v->{try{run.run();}catch(Exception e){Toast.makeText(this,e.getMessage(),Toast.LENGTH_LONG).show();}});}
     void action(String label,Runnable r){LinearLayout row=new LinearLayout(this);body.addView(row);button(row,label,r);}
+    private final Runnable ageTick=new Runnable(){public void run(){if(manager!=null&&tab==3)render();handler.postDelayed(this,2000);}};
+    @Override protected void onPause(){handler.removeCallbacks(ageTick);super.onPause();}
     @Override public void changed(){handler.post(this::render);}
     private void render(){if(body==null)return;GameState s=manager.snapshot();body.removeAllViews();
         status.setText(s.source+" · 修订 "+s.revision+(s.updatedAt==0?"":" · "+DateFormat.getTimeInstance().format(new Date(s.updatedAt)))+"\n所有结果来自记录与规则估算，不是游戏实际商店。");
@@ -81,6 +83,6 @@ public class MainActivity extends Activity implements DataManager.Listener {
     private void startOverlay(){if(!Settings.canDrawOverlays(this)){awaiting=true;startActivity(new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,Uri.parse("package:"+getPackageName())));return;}
         if(Build.VERSION.SDK_INT>=33&&checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED)requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS},10);
         startForegroundService(new Intent(this,OverlayService.class));}
-    @Override protected void onResume(){super.onResume();if(manager!=null)render();if(awaiting){awaiting=false;if(Settings.canDrawOverlays(this))startOverlay();}}
+    @Override protected void onResume(){super.onResume();handler.removeCallbacks(ageTick);handler.postDelayed(ageTick,2000);if(manager!=null)render();if(awaiting){awaiting=false;if(Settings.canDrawOverlays(this))startOverlay();}}
     @Override protected void onDestroy(){if(manager!=null)manager.remove(this);handler.removeCallbacksAndMessages(null);super.onDestroy();}
 }

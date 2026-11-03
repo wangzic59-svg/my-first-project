@@ -30,8 +30,9 @@ public class OverlayService extends Service implements DataManager.Listener {
         LinearLayout bar=new LinearLayout(this);widget.addView(bar);TextView drag=text("⠿ V0.6",14);bar.addView(drag,new LinearLayout.LayoutParams(0,dp(44),1));
         drag.setOnTouchListener(new View.OnTouchListener(){float x,y;int px,py;public boolean onTouch(View v,MotionEvent e){if(e.getAction()==0){x=e.getRawX();y=e.getRawY();px=params.x;py=params.y;return true;}if(e.getAction()==2){params.x=Math.max(0,px+(int)(e.getRawX()-x));params.y=Math.max(0,py+(int)(e.getRawY()-y));wm.updateViewLayout(widget,params);return true;}if(e.getAction()==MotionEvent.ACTION_UP)v.performClick();return true;}});
         button(bar,"收展",()->{collapsed=!collapsed;body.setVisibility(collapsed?View.GONE:View.VISIBLE);});button(bar,"×",this::stopSelf);
-        status=text("",11);widget.addView(status);body=new LinearLayout(this);body.setOrientation(LinearLayout.VERTICAL);widget.addView(body);wm.addView(widget,params);
+        status=text("",11);widget.addView(status);body=new LinearLayout(this);body.setOrientation(LinearLayout.VERTICAL);widget.addView(body);wm.addView(widget,params);handler.postDelayed(ageTick,2000);
     }
+    private final Runnable ageTick=new Runnable(){public void run(){if(widget==null)return;if(mode==4)render();handler.postDelayed(this,2000);}};
     @Override public void changed(){handler.post(this::render);}
     void render(){if(body==null)return;GameState s=manager.snapshot();renderedRevision=s.revision;status.setText(s.source+" · 修订 "+s.revision);body.removeAllViews();
         LinearLayout tabs=new LinearLayout(this);body.addView(tabs);String[] labels={"八人","卡池","预测","快编","观察"};for(int i=0;i<5;i++){final int n=i;button(tabs,labels[i],()->{mode=n;render();});}

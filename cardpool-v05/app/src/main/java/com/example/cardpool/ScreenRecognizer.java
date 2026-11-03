@@ -14,7 +14,7 @@ public final class ScreenRecognizer implements AutoCloseable {
  public ObservationGate.Frame read(Bitmap image,CaptureProfile profile,GameState game,long timestamp)throws Exception {
   if(Math.abs((double)image.getWidth()/image.getHeight()-profile.aspect)>profile.aspect*.04)throw new IllegalArgumentException("画面比例与校准不符，请重新校准或重授权");
   ObservationGate.Frame f=new ObservationGate.Frame();f.time=timestamp;
-  Map<String,String> heroes=new LinkedHashMap<>();for(GameState.Hero h:game.heroes.values())heroes.put(h.name,h.id);
+  Map<String,String> heroes=new LinkedHashMap<>();Set<String> ambiguous=new HashSet<>();for(GameState.Hero h:game.heroes.values()){String name=h.name.replaceAll("\\s+","");if(heroes.containsKey(name)){heroes.remove(name);ambiguous.add(name);}else if(!ambiguous.contains(name))heroes.put(name,h.id);}
   for(Map.Entry<String,RectF> entry:profile.regions.entrySet()){
    Bitmap crop=CaptureProfile.crop(image,entry.getValue());
    try{
@@ -24,7 +24,7 @@ public final class ScreenRecognizer implements AutoCloseable {
      boolean valid=region.startsWith("shop.")||region.endsWith(".hero")?game.heroes.containsKey(template.text):region.endsWith(".star")?template.text.matches("[123]"):region.endsWith(".equipment");
      if(valid){f.fields.put(region,template);continue;}
     }
-    Text result=Tasks.await(ocr.process(InputImage.fromBitmap(crop,0)),10,TimeUnit.SECONDS);
+    Text result=Tasks.await(ocr.process(InputImage.fromBitmap(crop,0)));
     String raw=result.getText().replaceAll("\\s+","");double confidence=1;int elements=0;
     for(Text.TextBlock block:result.getTextBlocks())for(Text.Line line:block.getLines())for(Text.Element element:line.getElements()){confidence=Math.min(confidence,element.getConfidence());elements++;}
     if(elements==0)confidence=0;
