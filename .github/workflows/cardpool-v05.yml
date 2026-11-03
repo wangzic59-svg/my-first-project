@@ -11,7 +11,7 @@ jobs:
   build:
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-24.04
-    timeout-minutes: 35
+    timeout-minutes: 50
     defaults:
       run:
         working-directory: cardpool-v05
@@ -23,11 +23,18 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
+          cache: gradle
       - uses: android-actions/setup-android@v3
         with:
           packages: platform-tools
           log-accepted-android-sdk-licenses: false
-      - run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0' 'ndk;27.2.12479018'
+      - uses: actions/cache@v4
+        with:
+          path: |
+            cardpool-v05/work/ocr
+            cardpool-v05/work/ocr-build
+          key: ocr-native-ubuntu24-r27c-tesseract4android490-v1
+      - run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0' 'ndk;27.2.12479018' 'cmake;3.22.1' 
       - run: bash scripts/test.sh
       - run: bash scripts/prepare_signing.sh
       - run: ANDROID_NDK_HOME="$ANDROID_HOME/ndk/27.2.12479018" bash gradlew --no-daemon :app:assembleDebug :app:assembleDebugAndroidTest :app:lintDebug

@@ -65,7 +65,7 @@ public final class CaptureService extends Service {
    Bitmap padded=Bitmap.createBitmap(image.getWidth()+padding/stride,image.getHeight(),Bitmap.Config.ARGB_8888);padded.copyPixelsFromBuffer(buffer);Bitmap frame=Bitmap.createBitmap(padded,0,0,image.getWidth(),image.getHeight());if(frame!=padded)padded.recycle();
    busy=true;lastFrame=SystemClock.elapsedRealtime();final int session=generation;final long timestamp=System.currentTimeMillis();
    worker.execute(()->{try{
-    if(recognizer==null)recognizer=new ScreenRecognizer(this);ObservationGate.Frame f=recognizer.read(frame,profile,manager.snapshot(),timestamp);
+    if(recognizer==null)recognizer=new ScreenRecognizer(this);ObservationGate.Frame f=recognizer.read(frame,profile,manager.snapshot(),timestamp,()->!ended&&!paused&&generation==session);
     main.post(()->{if(!ended&&!paused&&generation==session&&!manager.isSimulating())manager.observe(f,gate.accepted(f));});
    }catch(Exception e){main.post(()->{if(!ended&&generation==session)manager.captureStatus("识别失败（未覆盖数据）："+e.getMessage());});}finally{frame.recycle();busy=false;}});
   }catch(Exception e){manager.captureStatus("截图不可用："+e.getMessage());}finally{if(image!=null)image.close();}

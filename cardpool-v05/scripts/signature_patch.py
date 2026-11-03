@@ -9,10 +9,11 @@ ROOT=Path(__file__).resolve().parents[1]
 def sha(data):return hashlib.sha256(data).hexdigest()
 def source_hash():
  h=hashlib.sha256()
- files=[ROOT/'app/build.gradle',*(ROOT/'app/src/main').rglob('*')]
+ files=[ROOT/'app/build.gradle',ROOT/'scripts/prepare_ocr.py',ROOT/'scripts/build_ocr_native.py',ROOT/'scripts/build_native.py',*(ROOT/'app/src/main').rglob('*')]
  for p in sorted(files):
-  if p.is_file() and 'jniLibs' not in p.parts:h.update(str(p.relative_to(ROOT)).encode());h.update(b'\0');h.update(p.read_bytes());h.update(b'\0')
+  if p.is_file() and 'jniLibs' not in p.parts and 'tessdata' not in p.parts:h.update(str(p.relative_to(ROOT)).encode());h.update(b'\0');h.update(p.read_bytes());h.update(b'\0')
  return h.hexdigest()
+if len(sys.argv)==2 and sys.argv[1]=='source-hash':print(source_hash());sys.exit(0)
 if len(sys.argv)!=5:sys.exit('signature_patch.py make|apply INPUT.apk SIGNED.apk PATCH.json')
 mode,original,signed,patch=sys.argv[1:];original=Path(original);signed=Path(signed);patch=Path(patch)
 if mode=='make':

@@ -24,6 +24,9 @@ android {
         }
     }
 
+    sourceSets {
+        main.java.srcDirs += [rootProject.file('work/ocr/Tesseract4Android-4.9.0/tesseract4android/src/main/java'), rootProject.file('work/ocr-generated')]
+    }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
@@ -35,10 +38,19 @@ tasks.register('buildNative', Exec) {
     workingDir rootProject.projectDir
     commandLine 'python3', 'scripts/build_native.py'
 }
-tasks.named('preBuild').configure { dependsOn 'buildNative' }
+tasks.register('prepareOcr', Exec) {
+    workingDir rootProject.projectDir
+    commandLine 'python3', 'scripts/prepare_ocr.py'
+}
+tasks.register('buildOcr', Exec) {
+    dependsOn 'prepareOcr'
+    workingDir rootProject.projectDir
+    commandLine 'python3', 'scripts/build_ocr_native.py'
+}
+tasks.named('preBuild').configure { dependsOn 'buildNative', 'buildOcr' }
 
 dependencies {
- implementation 'com.google.mlkit:text-recognition-chinese:16.0.1'
+ implementation 'androidx.annotation:annotation:1.3.0'
  androidTestImplementation 'androidx.test:runner:1.6.2'
  androidTestImplementation 'androidx.test.ext:junit:1.2.1'
 }

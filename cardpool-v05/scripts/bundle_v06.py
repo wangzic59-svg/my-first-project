@@ -8,7 +8,7 @@ with zipfile.ZipFile(source,'w',zipfile.ZIP_DEFLATED) as z:
  for p in sorted(root.rglob('*')):
   if not p.is_file():continue
   rel=p.relative_to(root)
-  if any(x in ('.gradle','build','work','jniLibs','downloads') for x in rel.parts) or p.name=='local.properties' or p.suffix=='.keystore':continue
+  if any(x in ('.gradle','build','work','jniLibs','downloads','tessdata') for x in rel.parts) or p.name=='local.properties' or p.suffix=='.keystore':continue
   z.write(p,'cardpool-v05/'+str(rel))
 complete=root/'downloads/CardPool_V0.6_complete.zip'
 with zipfile.ZipFile(complete,'w',zipfile.ZIP_DEFLATED) as z:
