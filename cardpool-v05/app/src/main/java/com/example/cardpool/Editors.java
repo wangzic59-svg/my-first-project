@@ -39,7 +39,7 @@ public final class Editors {
         StringBuilder legend=new StringBuilder("英雄 ID：");for(GameState.Hero h:s.heroes.values())legend.append(h.id).append("=").append(h.name).append("； ");
         EditText rows=field(c,f,"每行：英雄ID,星级1–3,个数,装备（可空）\n"+legend,units.toString(),true);
         EditText lineup=field(c,f,"阵容备注（保留旧版文字）",p.lineup,false),equipment=field(c,f,"装备备注",p.equipment,false);
-        edit(c,m,s,"玩家 "+(index+1),f,x->{GameState.Player q=x.players[index];q.level=num(level);q.gold=num(gold);q.hp=num(hp);q.lineup=value(lineup);q.equipment=value(equipment);q.units.clear();
+        edit(c,m,s,"玩家 "+(index+1),f,x->{GameState.Player q=x.players[index];if(num(level)!=p.level)q.level=num(level);if(num(gold)!=p.gold)q.gold=num(gold);if(num(hp)!=p.hp)q.hp=num(hp);q.lineup=value(lineup);q.equipment=value(equipment);q.units.clear();
             if(!value(rows).isEmpty())for(String line:value(rows).split("\\n")){String[] a=line.split(",",4);if(a.length<3)throw new IllegalArgumentException("持牌格式：英雄ID,星级,个数,装备");q.units.add(new GameState.Holding(a[0].trim(),Integer.parseInt(a[1].trim()),Integer.parseInt(a[2].trim()),a.length==4?a[3].trim():""));}
         });
     }
