@@ -7,6 +7,7 @@ import java.util.*;
 public final class GameState implements Serializable {
     private static final long serialVersionUID = 5L;
     public int schema = 5;
+    public CaptureData capture = new CaptureData();
     public long revision = 0, updatedAt = 0;
     public String source = "手动输入", season = "自定义赛季（请配置规则）", target = "";
     public boolean rosterComplete = false, independentSlots = false, legacyImported = false;
@@ -35,7 +36,11 @@ public final class GameState implements Serializable {
     }
     public int observed(String id){
         long n=unattributed.getOrDefault(id,0);
-        for(Player p:players)for(Holding h:p.units)if(h.hero.equals(id))n+=h.copies();
+        for(int i=0;i<8;i++){
+            int manualCount=0,boardCount=0;for(Holding h:players[i].units)if(h.hero.equals(id))manualCount+=h.copies();
+            if(capture!=null&&capture.autoBoard&&!capture.players[i].manualLocks.contains("units"))for(Holding h:capture.players[i].board)if(h.hero.equals(id))boardCount+=h.copies();
+            n+=Math.max(manualCount,boardCount); // visible board is a lower bound; never add it twice to full manual holdings
+        }
         if(n>Integer.MAX_VALUE)throw new IllegalArgumentException("观察数量过大");
         return (int)n;
     }
@@ -67,7 +72,7 @@ public final class GameState implements Serializable {
     }catch(IOException e){throw new IllegalStateException(e);}}
     public static GameState decode(String text){try{
         byte[] b=Base64.getDecoder().decode(text);if(b.length>2000000)throw new IOException("数据过大");
-        try(ObjectInputStream in=new ObjectInputStream(new ByteArrayInputStream(b))){GameState s=(GameState)in.readObject();s.validate();return s;}
+        try(ObjectInputStream in=new ObjectInputStream(new ByteArrayInputStream(b))){GameState s=(GameState)in.readObject();if(s.capture==null)s.capture=new CaptureData();s.validate();return s;}
     }catch(Exception e){throw new IllegalArgumentException("保存的数据无法读取，原数据已保留",e);}}
     static int number(Object x,int fallback){try{return Integer.parseInt(String.valueOf(x).trim());}catch(Exception e){return fallback;}}
     /** Copy old values without modifying or removing the original preferences. */
@@ -96,6 +101,6 @@ public final class GameState implements Serializable {
             if(!p.lineup.isEmpty())b.append("  阵容备注：").append(p.lineup).append("\n");if(!p.equipment.isEmpty())b.append("  装备备注：").append(p.equipment).append("\n");
         }return b.toString();
     }
-    public String poolText(){StringBuilder b=new StringBuilder(season+"\n仅按观察估算；未观察棋子未扣除\n");
+    public String poolText(){StringBuilder b=new StringBuilder(season+"\n仅按手动及启用的可见棋盘下界估算；历史可能过期，未见备战席未扣除\n");
         for(Hero h:heroes.values()){int n=observed(h.id);b.append(h.name).append(" · ").append(h.cost==0?"费用待配置":h.cost+"费").append("\n已观察 ").append(n).append(" / 总量 ").append(h.total).append(" · 估算剩余 ").append(Math.max(0,h.total-n));if(n>h.total)b.append(" ⚠ 观察超过卡池，预测不可用");b.append("\n");}return b.toString();}
 }

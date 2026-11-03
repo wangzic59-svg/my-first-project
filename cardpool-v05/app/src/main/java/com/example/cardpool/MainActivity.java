@@ -17,11 +17,11 @@ public class MainActivity extends Activity implements DataManager.Listener {
     private final Handler handler=new Handler(Looper.getMainLooper());
     @Override public void onCreate(Bundle b){super.onCreate(b);try{manager=DataManager.get(this);}catch(Exception e){TextView t=new TextView(this);t.setText(e.getMessage()+"\n未覆盖原始数据，请先备份应用数据后排查。");setContentView(t);return;}
         LinearLayout root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setFitsSystemWindows(true);root.setPadding(dp(16),dp(20),dp(16),dp(8));root.setBackgroundColor(Color.rgb(13,25,40));setContentView(root);
-        TextView title=text("金铲铲卡池助手 V0.5",23);root.addView(title);status=text("",13);root.addView(status);
-        LinearLayout tabs=new LinearLayout(this);root.addView(tabs);String[] labels={"八人数据","卡池统计","商店预测"};for(int i=0;i<3;i++){final int n=i;button(tabs,labels[i],()->{tab=n;render();});}
+        TextView title=text("金铲铲卡池助手 V0.6",23);root.addView(title);status=text("",13);root.addView(status);
+        LinearLayout tabs=new LinearLayout(this);root.addView(tabs);String[] labels={"八人数据","卡池统计","商店预测","采集"};for(int i=0;i<4;i++){final int n=i;button(tabs,labels[i],()->{tab=n;render();});}
         ScrollView scroll=new ScrollView(this);root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));body=new LinearLayout(this);body.setOrientation(LinearLayout.VERTICAL);scroll.addView(body);
         LinearLayout actions=new LinearLayout(this);root.addView(actions);button(actions,"开启悬浮窗",this::startOverlay);button(actions,"关闭",()->stopService(new Intent(this,OverlayService.class)));
-        Button source=new Button(this);source.setText("切换手动 / 模拟实时数据");root.addView(source);source.setOnClickListener(v->manager.simulation(!manager.isSimulating()));manager.add(this);render();
+        Button source=new Button(this);source.setText("切换手动 / 模拟实时数据");root.addView(source);source.setOnClickListener(v->{stopService(new Intent(this,CaptureService.class));manager.simulation(!manager.isSimulating());});manager.add(this);render();
     }
     int dp(int n){return Math.round(n*getResources().getDisplayMetrics().density);}
     TextView text(String s,int size){TextView t=new TextView(this);t.setText(s);t.setTextSize(size);t.setTextColor(Color.rgb(225,238,245));t.setPadding(8,12,8,12);return t;}
@@ -40,7 +40,43 @@ public class MainActivity extends Activity implements DataManager.Listener {
                 detail.append("阵容：").append(p.lineup).append("\n装备：").append(p.equipment);body.addView(text(detail.toString(),14));
             }
         }else if(tab==1){action("配置赛季完整卡池与刷新规则",()->Editors.rules(this,manager));action("编辑目标英雄未归属观察",()->Editors.unknown(this,manager));body.addView(text(s.poolText(),16));}
-        else {action("选择预测玩家（当前玩家"+(s.selectedPlayer+1)+"）",()->Editors.choosePlayer(this,manager));action("配置刷新规则",()->Editors.rules(this,manager));body.addView(text(Prediction.explain(s),17));body.addView(text("数据来源接口：手动输入 / 隔离的模拟实时数据。已预留授权画面识别接口；尚未接入识别。无需 ROOT，不访问游戏进程。",13));}
+        else if(tab==2){action("多目标英雄",()->CaptureControls.targets(this,manager));action("选择预测玩家（当前玩家"+(s.selectedPlayer+1)+"）",()->Editors.choosePlayer(this,manager));action("配置刷新规则",()->Editors.rules(this,manager));body.addView(text(CaptureControls.predictions(s),17));body.addView(text("数据来源：手动 / 模拟 / 用户授权截图。实际可见商店与概率预测分开；没有下一轮真实商店接口。无需 ROOT，不访问游戏进程。",13));}
+        else {
+            action("校准识别区域与8名玩家别名",()->CaptureControls.profile(this));
+            action("从截图录入英雄/星级/装备图像模板",()->pickImage(68));
+            action("验证一张截图（不写入对局）",()->pickImage(67));
+            action("开始：请求系统屏幕捕获授权",this::startCapture);
+            action("暂停识别（断开采集表面）",()->captureAction(CaptureService.PAUSE));
+            action("恢复识别（仅当前授权会话）",()->captureAction(CaptureService.RESUME));
+            action("停止采集（释放授权）",()->stopService(new Intent(this,CaptureService.class)));
+            action("自动合并数值 / 手动修正锁定",()->CaptureControls.auto(this,manager));
+            action("可见棋盘参与卡池估算 / 持牌锁定",()->CaptureControls.board(this,manager));
+            body.addView(text("本地OCR置信分与图像相似度分不是准确率保证。须配置适合当前分辨率/布局的区域、唯一玩家名和模板。低置信/未知身份/画面遮挡不覆盖记录。棋盘通常不能看见备战席，观察层只表示可见子集。",13));
+            body.addView(text(s.capture.text(System.currentTimeMillis()),14));
+        }
+    }
+    private void pickImage(int request){Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT).setType("image/*").addCategory(Intent.CATEGORY_OPENABLE);startActivityForResult(i,request);}
+    private void captureAction(String action){startService(new Intent(this,CaptureService.class).setAction(action));}
+    private void startCapture(){
+        if(manager.isSimulating()){Toast.makeText(this,"请先退出模拟模式",Toast.LENGTH_LONG).show();return;}
+        if(!getSharedPreferences("capture_profile",0).getBoolean("configured",false)){Toast.makeText(this,"请先校准画面布局与玩家别名",Toast.LENGTH_LONG).show();return;}
+        stopService(new Intent(this,CaptureService.class));
+        android.media.projection.MediaProjectionManager pm=getSystemService(android.media.projection.MediaProjectionManager.class);
+        startActivityForResult(pm.createScreenCaptureIntent(),66);
+    }
+    @Override protected void onActivityResult(int request,int result,Intent data){super.onActivityResult(request,result,data);
+        if(request==66){if(result==RESULT_OK&&data!=null)startForegroundService(new Intent(this,CaptureService.class).setAction(CaptureService.START).putExtra("result",result).putExtra("consent",data));else Toast.makeText(this,"未授权，不进行屏幕捕获",Toast.LENGTH_LONG).show();}
+        else if((request==67||request==68)&&result==RESULT_OK&&data!=null){
+            if(request==68)CaptureControls.template(this,data.getData());
+            else {final Uri uri=data.getData();Toast.makeText(this,"正在本地验证截图…",Toast.LENGTH_SHORT).show();new Thread(()->{
+                android.graphics.Bitmap image=null;
+                try{image=CaptureControls.read(this,uri);try(ScreenRecognizer recognizer=new ScreenRecognizer(this)){
+                    ObservationGate.Frame f=recognizer.read(image,CaptureProfile.load(this),manager.snapshot(),System.currentTimeMillis());StringBuilder b=new StringBuilder("仅导入验证，未写入对局。\n玩家编号 "+f.player+"（0–7） · 身份置信分 "+f.identityConfidence+"\n");
+                    for(java.util.Map.Entry<String,ObservationGate.Token> e:f.fields.entrySet())b.append(e.getKey()).append("=").append(e.getValue().text).append(" · ").append(e.getValue().confidence).append("\n");
+                    handler.post(()->{if(!isFinishing()&&!isDestroyed())new AlertDialog.Builder(this).setTitle("截图识别结果").setMessage(b.toString()).setPositiveButton("关闭",null).show();});
+                }}catch(Exception e){handler.post(()->Toast.makeText(this,"验证失败："+e.getMessage(),Toast.LENGTH_LONG).show());}finally{if(image!=null)image.recycle();}
+            },"screenshot-validation").start();}
+        }
     }
     private void startOverlay(){if(!Settings.canDrawOverlays(this)){awaiting=true;startActivity(new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,Uri.parse("package:"+getPackageName())));return;}
         if(Build.VERSION.SDK_INT>=33&&checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED)requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS},10);

@@ -10,8 +10,9 @@ android {
         applicationId 'com.example.cardpool'
         minSdk 26
         targetSdk 35
-        versionCode 5
-        versionName '0.5-realtime'
+        versionCode 6
+        versionName '0.6-capture'
+        testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
     }
 
     signingConfigs {
@@ -35,3 +36,9 @@ tasks.register('buildNative', Exec) {
     commandLine 'python3', 'scripts/build_native.py'
 }
 tasks.named('preBuild').configure { dependsOn 'buildNative' }
+
+dependencies {
+ implementation 'com.google.mlkit:text-recognition-chinese:16.0.1'
+ androidTestImplementation 'androidx.test:runner:1.6.2'
+ androidTestImplementation 'androidx.test.ext:junit:1.2.1'
+}
