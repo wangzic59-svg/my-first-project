@@ -49,21 +49,9 @@ jobs:
           target: google_apis
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          script: |
-            # Gradle uninstalls test APKs on completion; app external files may disappear.
-            # Preserve real instrumentation OCR metrics from logcat instead of pulling a deleted file.
-            mkdir -p cardpool-v05/reports
-            set +e
-            (cd cardpool-v05 && ANDROID_NDK_HOME="$ANDROID_HOME/ndk/27.2.12479018" bash gradlew --no-daemon :app:connectedDebugAndroidTest)
-            test_status=$?
-            set -e
-            adb logcat -d -v brief -s OCR_ACCURACY:I '*:S' > cardpool-v05/reports/ocr-logcat.txt || true
-            grep -F 'Synthetic numeric exact accuracy=' cardpool-v05/reports/ocr-logcat.txt > cardpool-v05/reports/ocr-accuracy.txt || true
-            if [ ! -s cardpool-v05/reports/ocr-accuracy.txt ]; then
-              echo "OCR accuracy report missing from instrumentation logcat" >&2
-            fi
-            test "$test_status" -eq 0
-            test -s cardpool-v05/reports/ocr-accuracy.txt
+          # android-emulator-runner invokes every script line separately.
+          # Keep the full sequence on one line so shell control flow is not split.
+          script: cd cardpool-v05 && ANDROID_NDK_HOME="$ANDROID_HOME/ndk/27.2.12479018" bash gradlew --no-daemon :app:connectedDebugAndroidTest && adb logcat -d -v brief -s OCR_ACCURACY:I '*:S' > reports/ocr-accuracy.txt && test -s reports/ocr-accuracy.txt
       - uses: actions/upload-artifact@v4
         if: always()
         with:
