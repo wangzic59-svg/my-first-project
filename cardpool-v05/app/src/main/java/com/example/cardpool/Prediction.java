@@ -7,8 +7,8 @@ public final class Prediction {
             return (ShopOddsPreset.configured(s,s.players[s.selectedPlayer].level)
                 ?"已配置当前玩家等级的1–5费参考刷新比例，但它不是指定英雄的出现概率。"
                 :"当前玩家等级的基础费用刷新概率尚未配置或玩家等级未知。")
-                +"\\n指定英雄概率尚不能可靠计算：解锁棋子、固定右侧栏位、7费传说英雄、卡池完整性和当前版本差异都可能改变实际概率。"
-                +"\\n仍可正常使用非ROOT屏幕识别、商店观察记录和八人持牌统计。";
+                +"\n指定英雄概率尚不能可靠计算：解锁棋子、固定右侧栏位、7费传说英雄、卡池完整性和当前版本差异都可能改变实际概率。"
+                +"\n仍可正常使用非ROOT屏幕识别、商店观察记录和八人持牌统计。";
         for(GameState.Hero hero:s.heroes.values())if(hero.cost>5)
             return "预测不可用：当前普通商店计算器暂不支持6费或7费弈子，不能将其错误算作5费。";
 
