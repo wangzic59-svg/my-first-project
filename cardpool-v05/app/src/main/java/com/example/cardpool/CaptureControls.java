@@ -16,6 +16,26 @@ public final class CaptureControls {
   }catch(Exception e){Toast.makeText(a,e.getMessage(),Toast.LENGTH_LONG).show();}});
  }
  /** Optional explicit association for shops where the player label is hidden by the shop UI. */
+ /** Latest high-confidence confirmed current-shop observations. These are NOT future refresh results. */
+ public static String shopSummary(GameState s){
+  StringBuilder out=new StringBuilder("最近确认的当前商店（不是下一轮预知）：\\n");
+  boolean any=false;
+  long now=System.currentTimeMillis();
+  for(int p=0;p<8;p++){
+   CaptureData.Player player=s.capture.players[p];StringBuilder row=new StringBuilder();
+   for(int k=0;k<5;k++){
+    CaptureData.Value v=player.values.get("shop."+k);
+    if(v==null)continue;
+    if(row.length()>0)row.append(" · ");
+    GameState.Hero hero=s.heroes.get(v.text);
+    row.append(k+1).append(":").append(hero==null?v.text:hero.name);
+    if(now-v.seen>30000)row.append("(历史)");
+   }
+   if(row.length()>0){any=true;out.append("玩家").append(p+1).append("：").append(row).append("\\n");}
+  }
+  if(!any)out.append("暂无双帧确认的英雄。请先配置真实英雄名单、正确区域并验证截图。");
+  return out.toString();
+ }
  public static void shopOwner(Activity a){
   String[] choices=new String[9];choices[0]="不绑定（必须从截图识别玩家名）";
   for(int i=0;i<8;i++)choices[i+1]="当前商店属于玩家"+(i+1)+"（只关联五格商店）";
