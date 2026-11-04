@@ -19,7 +19,7 @@ public class MainActivity extends Activity implements DataManager.Listener {
     private final Handler handler=new Handler(Looper.getMainLooper());
     @Override public void onCreate(Bundle b){super.onCreate(b);try{manager=DataManager.get(this);}catch(Exception e){TextView t=new TextView(this);t.setText(e.getMessage()+"\n未覆盖原始数据，请先备份应用数据后排查。");setContentView(t);return;}
         LinearLayout root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setFitsSystemWindows(true);root.setPadding(dp(16),dp(20),dp(16),dp(8));root.setBackgroundColor(Color.rgb(13,25,40));setContentView(root);
-        TextView title=text("金铲铲卡池助手 V0.6.3 · 传奇normal",23);root.addView(title);status=text("",13);root.addView(status);
+        TextView title=text("金铲铲卡池助手 V0.6.4 · 传奇normal",23);root.addView(title);status=text("",13);root.addView(status);
         LinearLayout tabs=new LinearLayout(this);root.addView(tabs);String[] labels={"八人数据","卡池统计","商店预测","采集"};for(int i=0;i<4;i++){final int n=i;button(tabs,labels[i],()->{tab=n;render();});}
         ScrollView scroll=new ScrollView(this);root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));body=new LinearLayout(this);body.setOrientation(LinearLayout.VERTICAL);scroll.addView(body);
         LinearLayout actions=new LinearLayout(this);root.addView(actions);button(actions,"开启悬浮窗",this::startOverlay);button(actions,"关闭",()->stopService(new Intent(this,OverlayService.class)));
