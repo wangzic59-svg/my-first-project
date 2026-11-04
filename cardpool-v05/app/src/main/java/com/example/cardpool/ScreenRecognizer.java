@@ -59,7 +59,7 @@ public final class ScreenRecognizer implements AutoCloseable {
     ObservationGate.Token token=recognize(crop,!numeric&&(key.startsWith("shop.")||hasHan(vocabulary)),numeric);String raw=token.text,value=raw;
     if(key.equals("player")){String id=ObservationGate.exact(raw,profile.players);if(id!=null){f.player=Integer.parseInt(id);f.identityConfidence=token.confidence;}continue;}
     if(key.equals("gold")||key.equals("level")||key.equals("hp")){if(ObservationGate.scalar(key,raw)==null)continue;}
-    else if(key.startsWith("shop.")||key.endsWith(".hero")){value=ObservationGate.exact(raw,heroes);if(value==null){
+    else if(key.startsWith("shop.")||key.endsWith(".hero")){value=ShopDiagnostic.canonicalExact(raw,heroes);if(value==null){
       // Keep rejected candidates visible to the screenshot-review UI, but never auto-accept them.
       if(key.startsWith("shop.")&&!raw.isEmpty())f.fields.put(key,new ObservationGate.Token("未匹配："+raw,0));
       continue;
