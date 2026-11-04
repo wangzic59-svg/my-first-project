@@ -72,7 +72,7 @@ public final class GameState implements Serializable {
     }catch(IOException e){throw new IllegalStateException(e);}}
     public static GameState decode(String text){try{
         byte[] b=Base64.getDecoder().decode(text);if(b.length>2000000)throw new IOException("数据过大");
-        try(ObjectInputStream in=new ObjectInputStream(new ByteArrayInputStream(b))){GameState s=(GameState)in.readObject();if(s.capture==null)s.capture=new CaptureData();s.validate();return s;}
+        try(ObjectInputStream in=new ObjectInputStream(new ByteArrayInputStream(b))){GameState s=(GameState)in.readObject();if(s.capture==null)s.capture=new CaptureData();s.capture.ensureHistory();s.validate();return s;}
     }catch(Exception e){throw new IllegalArgumentException("保存的数据无法读取，原数据已保留",e);}}
     static int number(Object x,int fallback){try{return Integer.parseInt(String.valueOf(x).trim());}catch(Exception e){return fallback;}}
     /** Copy old values without modifying or removing the original preferences. */
