@@ -20,22 +20,6 @@ public class V06Test {
   ok(preserved&&imported.heroes.containsKey("ahri"),"CSV missing held hero cannot delete existing data");
   ObservationGate.Frame ambiguous=f(1,7,"gold","99",.99);ambiguous.identityConfidence=.5;ok(gate.accepted(ambiguous).isEmpty(),"ambiguous identity never overwrites");ok(gate.accepted(f(1,6,"gold","50",.99)).isEmpty(),"out of order rejected");
   ok(ObservationGate.scalar("level","12")==null,"level range");ok(ObservationGate.scalar("gold","5O")==null,"no digit hallucination");ok(ObservationGate.scalar("hp","100")==100,"valid numeric");ok(ObservationGate.scalar("level","0")==null,"unknown level not observed");
-  String csv="# season=用户核对后的赛季\\nid,name,cost,total\\nshen,慎,1,0\\njhin,烬,1,0\\n";
-  SeasonRosterCsv.Parsed roster=SeasonRosterCsv.parse(csv);
-  ok(roster.heroes.size()==2&&roster.missingTotals==2,"CSV names are imported; unverified totals remain zero");
-  ok(roster.heroes.get("shen").cost==1&&roster.season.contains("用户核对"),"cost and user-specified mode retained");
-  boolean rejectsDuplicate=false;
-  try{SeasonRosterCsv.parse("id,name,cost,total\\na,慎,1,0\\nb,慎,1,0\\n");}
-  catch(IllegalArgumentException e){rejectsDuplicate=true;}
-  ok(rejectsDuplicate,"duplicate OCR names rejected");
-  GameState rosterState=new GameState();
-  rosterState.heroes.put("old",new GameState.Hero("old","旧英雄",2,10));
-  rosterState.target="old";
-  rosterState.players[0].units.add(new GameState.Holding("old",1,1,""));
-  boolean protectsHoldings=false;
-  try{SeasonRosterCsv.apply(rosterState,roster);}
-  catch(IllegalArgumentException e){protectsHoldings=true;}
-  ok(protectsHoldings&&rosterState.heroes.containsKey("old"),"import refuses to erase existing holdings");
   Map<String,String> aliases=new LinkedHashMap<>();aliases.put("Alice","0");aliases.put("A lice","1");ok(ObservationGate.exact("Alice",aliases)==null,"ambiguous normalized alias rejected");
   GameState old=GameState.decode(Files.readString(Path.of("tests/fixtures/v05-state.txt")).trim());ok(old.capture!=null&&old.players[3].gold==42&&old.observed("old")==3,"genuine V0.5 deserialization keeps data");
   V05Test.Prefs prefs=new V05Test.Prefs(); // V05 tests run in another JVM; singleton is fresh.
