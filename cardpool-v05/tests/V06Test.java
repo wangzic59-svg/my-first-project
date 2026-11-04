@@ -19,6 +19,15 @@ public class V06Test {
   ok(Arrays.equals(costCounts,new int[]{0,14,20,23,28,29}),"helper Set16 roster cost buckets");
   ok(candidate.heroes.containsKey("11402")&&candidate.heroes.get("11402").name.equals("慎"),"original helper hero ids retained");
   ok(candidate.missingTotals==114,"helper roster has no invented pool totals");
+  String legendRoster=Files.readString(Path.of("app/src/main/assets/season_profiles/jcc_legend_20261104_normal_candidate.csv"));
+  SeasonRosterCsv.Parsed legend=SeasonRosterCsv.parse(legendRoster);
+  ok(legend.heroes.size()==119&&legend.missingTotals==119,"legend 2026-11-04 candidate adds five with unknown totals");
+  ok(legend.heroes.containsKey("legend20261104_smolder")&&legend.heroes.get("legend20261104_smolder").cost==7,"new 7-cost units accepted, not mislabeled 5 cost");
+  ok(legend.heroes.containsKey("11402")&&legend.heroes.get("11402").cost==1,"helper native IDs preserved in legend candidate");
+  GameState legendState=new GameState();SeasonRosterCsv.apply(legendState,legend);legendState.rosterComplete=true;
+  ok(Prediction.explain(legendState).contains("解锁"),"legend model must refuse unsupported unlock odds");
+  ok(SeasonAudit.report(legendState).contains("7费"),"legend audit reports special hero tier");
+
 
   ok(csv.heroes.size()==2&&csv.missingTotals==1,"CSV roster parses heroes and flags unknown totals");
   GameState imported=new GameState();SeasonRosterCsv.apply(imported,csv);
