@@ -15,13 +15,13 @@ import java.io.*;
 import java.nio.charset.StandardCharsets;
 
 public class MainActivity extends Activity implements DataManager.Listener {
-    private DataManager manager;private LinearLayout body;private TextView status;private int tab=0;private boolean awaiting=false;
+    private DataManager manager;private LinearLayout body;private ScrollView scroller;private TextView status;private int tab=0;private boolean awaiting=false;
     private final Handler handler=new Handler(Looper.getMainLooper());
     @Override public void onCreate(Bundle b){super.onCreate(b);try{manager=DataManager.get(this);}catch(Exception e){TextView t=new TextView(this);t.setText(e.getMessage()+"\n未覆盖原始数据，请先备份应用数据后排查。");setContentView(t);return;}
         LinearLayout root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setFitsSystemWindows(true);root.setPadding(dp(16),dp(20),dp(16),dp(8));root.setBackgroundColor(Color.rgb(13,25,40));setContentView(root);
-        TextView title=text("金铲铲卡池助手 V0.6.4 · 传奇normal",23);root.addView(title);status=text("",13);root.addView(status);
-        LinearLayout tabs=new LinearLayout(this);root.addView(tabs);String[] labels={"八人数据","卡池统计","商店预测","采集"};for(int i=0;i<4;i++){final int n=i;button(tabs,labels[i],()->{tab=n;render();});}
-        ScrollView scroll=new ScrollView(this);root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));body=new LinearLayout(this);body.setOrientation(LinearLayout.VERTICAL);scroll.addView(body);
+        TextView title=text("金铲铲卡池助手 V0.6.5 · 非ROOT采集",23);root.addView(title);status=text("",13);root.addView(status);
+        LinearLayout tabs=new LinearLayout(this);root.addView(tabs);String[] labels={"八人数据","卡池统计","商店预测","采集"};for(int i=0;i<4;i++){final int n=i;button(tabs,labels[i],()->{tab=n;if(scroller!=null)scroller.scrollTo(0,0);render();});}
+        scroller=new ScrollView(this);root.addView(scroller,new LinearLayout.LayoutParams(-1,0,1));body=new LinearLayout(this);body.setOrientation(LinearLayout.VERTICAL);scroller.addView(body);
         LinearLayout actions=new LinearLayout(this);root.addView(actions);button(actions,"开启悬浮窗",this::startOverlay);button(actions,"关闭",()->stopService(new Intent(this,OverlayService.class)));
         Button source=new Button(this);source.setText("切换手动 / 模拟实时数据");root.addView(source);source.setOnClickListener(v->{stopService(new Intent(this,CaptureService.class));manager.simulation(!manager.isSimulating());});manager.add(this);render();
     }
@@ -32,7 +32,7 @@ public class MainActivity extends Activity implements DataManager.Listener {
     private final Runnable ageTick=new Runnable(){public void run(){if(manager!=null&&tab==3)render();handler.postDelayed(this,2000);}};
     @Override protected void onPause(){handler.removeCallbacks(ageTick);super.onPause();}
     @Override public void changed(){handler.post(this::render);}
-    private void render(){if(body==null)return;GameState s=manager.snapshot();body.removeAllViews();
+    private void render(){if(body==null)return;final int previousScroll=scroller==null?0:scroller.getScrollY();GameState s=manager.snapshot();body.removeAllViews();
         status.setText(s.source+" · 修订 "+s.revision+(s.updatedAt==0?"":" · "+DateFormat.getTimeInstance().format(new Date(s.updatedAt)))+"\n已观察商店见采集页；概率是估算，不是下一轮真实商店。");
         action("选择目标英雄（当前："+(s.heroes.containsKey(s.target)?s.heroes.get(s.target).name:"未选择")+"）",()->Editors.chooseHero(this,manager));
         if(tab==0){
@@ -46,6 +46,7 @@ public class MainActivity extends Activity implements DataManager.Listener {
         }else if(tab==1){action("导入：英雄联盟传奇普通模式（候选OCR名单）",this::importLegendCandidate);action("从CSV文件导入赛季英雄名单",this::pickRoster);action("配置赛季完整卡池与刷新规则",()->Editors.rules(this,manager));action("编辑目标英雄未归属观察",()->Editors.unknown(this,manager));body.addView(text(SeasonAudit.report(s),14));body.addView(text(s.poolText(),16));}
         else if(tab==2){action("多目标英雄",()->CaptureControls.targets(this,manager));action("选择预测玩家（当前玩家"+(s.selectedPlayer+1)+"）",()->Editors.choosePlayer(this,manager));action("配置刷新规则",()->Editors.rules(this,manager));body.addView(text(CaptureControls.predictions(s),17));body.addView(text("数据来源：手动 / 模拟 / 用户授权截图。实际可见商店与概率预测分开；没有下一轮真实商店接口。无需 ROOT，不访问游戏进程。",13));}
         else {
+            action("一键加载旧截图五格区域（1536×695）",()->CaptureControls.quickShopPreset(this));
             action("校准识别区域与8名玩家别名",()->CaptureControls.profile(this));
             action("绑定当前商店归属玩家（仅五张棋子）",()->CaptureControls.shopOwner(this));
             body.addView(text("商店自动识别：先配置包含正确名称和费用的英雄名单，再选择商店截图示例布局并核对；玩家名字被商店遮挡时可手动绑定。未匹配的OCR结果只供核对，不会写入。",13));
@@ -64,6 +65,7 @@ public class MainActivity extends Activity implements DataManager.Listener {
             body.addView(text("本地OCR置信分与图像相似度分不是准确率保证。须配置适合当前分辨率/布局的区域、唯一玩家名和模板。低置信/未知身份/画面遮挡不覆盖记录。棋盘通常不能看见备战席，观察层只表示可见子集。",13));
             body.addView(text(s.capture.text(System.currentTimeMillis()),14));
         }
+        if(scroller!=null&&previousScroll>0)scroller.post(()->scroller.scrollTo(0,previousScroll));
     }
     private void importLegendCandidate(){
         try(InputStream in=getAssets().open("season_profiles/jcc_legend_20261104_normal_candidate.csv");ByteArrayOutputStream out=new ByteArrayOutputStream()){
@@ -121,9 +123,15 @@ public class MainActivity extends Activity implements DataManager.Listener {
             else {final Uri uri=data.getData();Toast.makeText(this,"正在本地验证截图…",Toast.LENGTH_SHORT).show();new Thread(()->{
                 android.graphics.Bitmap image=null;
                 try{image=CaptureControls.read(this,uri);try(ScreenRecognizer recognizer=new ScreenRecognizer(this)){
-                    ObservationGate.Frame f=recognizer.read(image,CaptureProfile.load(this),manager.snapshot(),System.currentTimeMillis());StringBuilder b=new StringBuilder("仅导入验证，未写入对局。\n玩家编号 "+f.player+"（0–7） · 身份置信分 "+f.identityConfidence+"\n");
-                    for(java.util.Map.Entry<String,ObservationGate.Token> e:f.fields.entrySet())b.append(e.getKey()).append("=").append(e.getValue().text).append(" · ").append(e.getValue().confidence).append("\n");
-                    handler.post(()->{if(!isFinishing()&&!isDestroyed())new AlertDialog.Builder(this).setTitle("截图识别结果").setMessage(b.toString()).setPositiveButton("关闭",null).show();});
+                    CaptureProfile profile=CaptureProfile.load(this);GameState game=manager.snapshot();
+                    ObservationGate.Frame frame=recognizer.read(image,profile,game,System.currentTimeMillis());
+                    String review=ShopDiagnostic.report(game,frame,profile.regions.keySet());
+                    handler.post(()->{if(!isFinishing()&&!isDestroyed())new AlertDialog.Builder(this)
+                        .setTitle("逐格截图诊断（未写入对局）").setMessage(review)
+                        .setNeutralButton("复制诊断报告",(dialog,which)->{
+                            android.content.ClipboardManager cb=(android.content.ClipboardManager)getSystemService(CLIPBOARD_SERVICE);
+                            if(cb!=null){cb.setPrimaryClip(ClipData.newPlainText("卡池助手截图诊断",review));Toast.makeText(this,"已复制诊断报告，可粘贴给我分析",Toast.LENGTH_LONG).show();}
+                        }).setPositiveButton("关闭",null).show();});
                 }}catch(Exception e){handler.post(()->Toast.makeText(this,"验证失败："+e.getMessage(),Toast.LENGTH_LONG).show());}finally{if(image!=null)image.recycle();}
             },"screenshot-validation").start();}
         }
