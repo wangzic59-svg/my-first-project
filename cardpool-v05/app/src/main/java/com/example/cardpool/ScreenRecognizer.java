@@ -31,13 +31,16 @@ public final class ScreenRecognizer implements AutoCloseable {
   for(int p:pixels)sum+=(((p>>16)&255)*77+((p>>8)&255)*150+(p&255)*29)>>8;boolean invert=sum/(double)pixels.length<128;
   for(int i=0;i<pixels.length;i++){int p=pixels[i],v=((((p>>16)&255)*77+((p>>8)&255)*150+(p&255)*29)>>8);if(invert)v=255-v;pixels[i]=0xff000000|(v<<16)|(v<<8)|v;}
   Bitmap prepared=Bitmap.createBitmap(pixels,crop.getWidth(),crop.getHeight(),Bitmap.Config.ARGB_8888);
-  try{api.setImage(prepared);String text=api.getUTF8Text();double confidence=api.meanConfidence()/100.;api.clear();ObservationGate.Token best=new ObservationGate.Token(text==null?"":text.replaceAll("\\s+",""),confidence);
+  // Tiny single-line shop labels need more pixels; upscale the prepared crop without inventing recognition confidence.
+  Bitmap enlarged=prepared;
+  if(prepared.getHeight()<56){int scale=Math.min(3,Math.max(2,(int)Math.ceil(56.0/prepared.getHeight())));enlarged=Bitmap.createScaledBitmap(prepared,prepared.getWidth()*scale,prepared.getHeight()*scale,true);}
+  try{api.setImage(enlarged);String text=api.getUTF8Text();double confidence=api.meanConfidence()/100.;api.clear();ObservationGate.Token best=new ObservationGate.Token(text==null?"":text.replaceAll("\\s+",""),confidence);
    // Retry the original pixels only for weak/empty results; confidence remains the engine's measured score.
    if(best.text.isEmpty()||best.confidence<ObservationGate.MIN){api.setImage(crop);String second=api.getUTF8Text();double c=api.meanConfidence()/100.;api.clear();String t=second==null?"":second.replaceAll("\\s+","");
     if(!best.text.isEmpty()&&!t.isEmpty()&&!best.text.equals(t))return new ObservationGate.Token(best.text,0);
     if(c>best.confidence)best=new ObservationGate.Token(t,c);
    }return best;
-  }finally{prepared.recycle();}
+  }finally{if(enlarged!=prepared)enlarged.recycle();prepared.recycle();}
  }
  public ObservationGate.Frame read(Bitmap image,CaptureProfile profile,GameState game,long timestamp)throws Exception{return read(image,profile,game,timestamp,()->true);}
  public ObservationGate.Frame read(Bitmap image,CaptureProfile profile,GameState game,long timestamp,BooleanSupplier active)throws Exception{
@@ -56,12 +59,23 @@ public final class ScreenRecognizer implements AutoCloseable {
     ObservationGate.Token token=recognize(crop,!numeric&&hasHan(vocabulary),numeric);String raw=token.text,value=raw;
     if(key.equals("player")){String id=ObservationGate.exact(raw,profile.players);if(id!=null){f.player=Integer.parseInt(id);f.identityConfidence=token.confidence;}continue;}
     if(key.equals("gold")||key.equals("level")||key.equals("hp")){if(ObservationGate.scalar(key,raw)==null)continue;}
-    else if(key.startsWith("shop.")||key.endsWith(".hero")){value=ObservationGate.exact(raw,heroes);if(value==null)continue;}
+    else if(key.startsWith("shop.")||key.endsWith(".hero")){value=ObservationGate.exact(raw,heroes);if(value==null){
+      // Keep rejected candidates visible to the screenshot-review UI, but never auto-accept them.
+      if(key.startsWith("shop.")&&!raw.isEmpty())f.fields.put(key,new ObservationGate.Token("未匹配："+raw,0));
+      continue;
+    }}
     else if(key.endsWith(".star")){if(!raw.matches("[123]"))continue;}
     else if(key.endsWith(".equipment")){value=ObservationGate.exact(raw,profile.equipment);if(value==null)continue;}
     f.fields.put(key,new ObservationGate.Token(value,token.confidence));
    }finally{if(crop!=image)crop.recycle();}
-  }return f;
+  }
+  if(f.player<0&&profile.shopOwner>=0){
+    // A manually selected owner is valid ONLY for current visible shop entries.
+    // It must never authorize guessed board, health, gold or level updates.
+    f.fields.entrySet().removeIf(e->!e.getKey().matches("shop\\.[0-4]"));
+    f.player=profile.shopOwner;f.identityConfidence=1.0;
+  }
+  return f;
  }
  public void close(){if(latin!=null){latin.recycle();latin=null;}if(chinese!=null){chinese.recycle();chinese=null;}}
 }
