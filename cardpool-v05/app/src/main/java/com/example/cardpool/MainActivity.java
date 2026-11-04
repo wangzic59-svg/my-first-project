@@ -43,8 +43,8 @@ public class MainActivity extends Activity implements DataManager.Listener {
                 for(GameState.Holding h:p.units)detail.append(s.heroes.get(h.hero).name).append(" ").append(h.star).append("★ ×").append(h.count).append(" · ").append(h.equipment).append("\n");
                 detail.append("阵容：").append(p.lineup).append("\n装备：").append(p.equipment);body.addView(text(detail.toString(),14));
             }
-        }else if(tab==1){action("导入：英雄联盟传奇普通模式（候选OCR名单）",this::importLegendCandidate);action("从CSV文件导入赛季英雄名单",this::pickRoster);action("配置赛季完整卡池与刷新规则",()->Editors.rules(this,manager));action("编辑目标英雄未归属观察",()->Editors.unknown(this,manager));body.addView(text(SeasonAudit.report(s),14));body.addView(text(s.poolText(),16));}
-        else if(tab==2){action("多目标英雄",()->CaptureControls.targets(this,manager));action("选择预测玩家（当前玩家"+(s.selectedPlayer+1)+"）",()->Editors.choosePlayer(this,manager));action("配置刷新规则",()->Editors.rules(this,manager));body.addView(text(CaptureControls.predictions(s),17));body.addView(text("数据来源：手动 / 模拟 / 用户授权截图。实际可见商店与概率预测分开；没有下一轮真实商店接口。无需 ROOT，不访问游戏进程。",13));}
+        }else if(tab==1){action("导入：英雄联盟传奇普通模式（候选OCR名单）",this::importLegendCandidate);action("从CSV文件导入赛季英雄名单",this::pickRoster);action("一键配置：1～11级商店费用概率（版本可选）",this::configureShopOddsPreset);action("配置赛季完整卡池与刷新规则",()->Editors.rules(this,manager));action("编辑目标英雄未归属观察",()->Editors.unknown(this,manager));body.addView(text(SeasonAudit.report(s),14));body.addView(text(ShopOddsPreset.summary(s),14));body.addView(text(s.poolText(),16));}
+        else if(tab==2){action("多目标英雄",()->CaptureControls.targets(this,manager));action("选择预测玩家（当前玩家"+(s.selectedPlayer+1)+"）",()->Editors.choosePlayer(this,manager));action("加载等级概率参考表",this::configureShopOddsPreset);action("配置刷新规则",()->Editors.rules(this,manager));body.addView(text(ShopOddsPreset.selectedLevel(s),15));body.addView(text(CaptureControls.predictions(s),17));body.addView(text("数据来源：手动 / 模拟 / 用户授权截图。实际可见商店与概率预测分开；没有下一轮真实商店接口。无需 ROOT，不访问游戏进程。",13));}
         else {
             action("一键加载旧截图五格区域（1536×695）",()->CaptureControls.quickShopPreset(this));
             action("校准识别区域与8名玩家别名",()->CaptureControls.profile(this));
@@ -66,6 +66,24 @@ public class MainActivity extends Activity implements DataManager.Listener {
             body.addView(text(s.capture.text(System.currentTimeMillis()),14));
         }
         if(scroller!=null&&previousScroll>0)scroller.post(()->scroller.scrollTo(0,previousScroll));
+    }
+    private void configureShopOddsPreset(){
+        if(manager.isSimulating()){
+            Toast.makeText(this,"请先退出模拟数据模式",Toast.LENGTH_LONG).show();
+            return;
+        }
+        new AlertDialog.Builder(this)
+            .setTitle("载入费用概率参考表（不会自动核实卡池）")
+            .setMessage("公开历史资料给出两种7级概率：\n"+
+                "16.4调整后：16/30/43/10/1%\n"+
+                "16.4调整前：19/30/40/10/1%\n\n"+
+                "其余等级按公开版本表填写1～11级。"+
+                "必须与当前手机版本核对。此操作只填写各等级1～5费概率，不改卡池总张数、解锁状态及持牌记录。"+
+                "英雄联盟传奇的指定英雄概率仍不可用。")
+            .setPositiveButton("16.4调整后",(d,w)->manager.mutate(x->ShopOddsPreset.apply(x,true)))
+            .setNeutralButton("16.4调整前",(d,w)->manager.mutate(x->ShopOddsPreset.apply(x,false)))
+            .setNegativeButton("取消",null)
+            .show();
     }
     private void importLegendCandidate(){
         try(InputStream in=getAssets().open("season_profiles/jcc_legend_20261104_normal_candidate.csv");ByteArrayOutputStream out=new ByteArrayOutputStream()){
