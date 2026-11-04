@@ -62,6 +62,10 @@ public final class SeasonRosterCsv {
   state.heroes.clear();state.heroes.putAll(csv.heroes);
   if(!state.heroes.containsKey(state.target))state.target=state.heroes.keySet().iterator().next();
   state.capture.targets.retainAll(state.heroes.keySet());
+  if(!csv.season.isEmpty()&&!csv.season.equals(state.season)){
+   // Odds for an old season cannot silently carry into a newly imported season.
+   state.odds=new double[12][5];state.oddsSource="未配置（切换赛季后已清空旧概率）";
+  }
   if(!csv.season.isEmpty())state.season=csv.season;
   state.rosterComplete=false; // User must explicitly verify all heroes, pool totals, and mode-specific odds.
  }
