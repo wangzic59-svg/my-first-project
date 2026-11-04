@@ -43,7 +43,7 @@ public class MainActivity extends Activity implements DataManager.Listener {
                 for(GameState.Holding h:p.units)detail.append(s.heroes.get(h.hero).name).append(" ").append(h.star).append("★ ×").append(h.count).append(" · ").append(h.equipment).append("\n");
                 detail.append("阵容：").append(p.lineup).append("\n装备：").append(p.equipment);body.addView(text(detail.toString(),14));
             }
-        }else if(tab==1){action("从CSV文件导入赛季英雄名单",this::pickRoster);action("配置赛季完整卡池与刷新规则",()->Editors.rules(this,manager));action("编辑目标英雄未归属观察",()->Editors.unknown(this,manager));body.addView(text(SeasonAudit.report(s),14));body.addView(text(s.poolText(),16));}
+        }else if(tab==1){action("载入内置：画之灵返场候选名单（仅OCR）",this::importHuazhilingCandidate);action("从CSV文件导入赛季英雄名单",this::pickRoster);action("配置赛季完整卡池与刷新规则",()->Editors.rules(this,manager));action("编辑目标英雄未归属观察",()->Editors.unknown(this,manager));body.addView(text(SeasonAudit.report(s),14));body.addView(text(s.poolText(),16));}
         else if(tab==2){action("多目标英雄",()->CaptureControls.targets(this,manager));action("选择预测玩家（当前玩家"+(s.selectedPlayer+1)+"）",()->Editors.choosePlayer(this,manager));action("配置刷新规则",()->Editors.rules(this,manager));body.addView(text(CaptureControls.predictions(s),17));body.addView(text("数据来源：手动 / 模拟 / 用户授权截图。实际可见商店与概率预测分开；没有下一轮真实商店接口。无需 ROOT，不访问游戏进程。",13));}
         else {
             action("校准识别区域与8名玩家别名",()->CaptureControls.profile(this));
@@ -61,6 +61,17 @@ public class MainActivity extends Activity implements DataManager.Listener {
             body.addView(text("本地OCR置信分与图像相似度分不是准确率保证。须配置适合当前分辨率/布局的区域、唯一玩家名和模板。低置信/未知身份/画面遮挡不覆盖记录。棋盘通常不能看见备战席，观察层只表示可见子集。",13));
             body.addView(text(s.capture.text(System.currentTimeMillis()),14));
         }
+    }
+    private void importHuazhilingCandidate(){
+        try(InputStream in=getAssets().open("season_profiles/jcc_huazhiling_2026_normal_candidate.csv");ByteArrayOutputStream out=new ByteArrayOutputStream()){
+            byte[] buffer=new byte[8192];int count;while((count=in.read(buffer))!=-1){if(out.size()+count>512000)throw new IOException("候选名单文件过大");out.write(buffer,0,count);}
+            SeasonRosterCsv.Parsed parsed=SeasonRosterCsv.parse(new String(out.toByteArray(),StandardCharsets.UTF_8));
+            String message="画之灵返场 · 普通模式候选名单\\n英雄名称与费用仅作OCR字典候选，不代表已核实返场名单。\\n英雄："+parsed.heroes.size()+"\\n费用：1费13、2费13、3费13、4费12、5费8（候选）\\n卡池总张数全部未知；刷新概率未配置。导入后不会启用概率预测。";
+            new AlertDialog.Builder(this).setTitle("导入候选名单").setMessage(message).setNegativeButton("取消",null).setPositiveButton("导入OCR字典",(d,w)->{
+                try{manager.mutate(state->SeasonRosterCsv.apply(state,parsed));Toast.makeText(this,"候选名单已导入；卡池概率仍禁用",Toast.LENGTH_LONG).show();}
+                catch(Exception e){new AlertDialog.Builder(this).setTitle("导入失败").setMessage(e.getMessage()).setPositiveButton("确定",null).show();}
+            }).show();
+        }catch(Exception e){Toast.makeText(this,"内置名单读取失败："+e.getMessage(),Toast.LENGTH_LONG).show();}
     }
     private void pickRoster(){Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT).setType("*/*").addCategory(Intent.CATEGORY_OPENABLE);startActivityForResult(i,69);}
     private void pickImage(int request){Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT).setType("image/*").addCategory(Intent.CATEGORY_OPENABLE);startActivityForResult(i,request);}
