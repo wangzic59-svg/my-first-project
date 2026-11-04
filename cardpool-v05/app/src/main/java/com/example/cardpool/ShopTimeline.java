@@ -42,6 +42,13 @@ public final class ShopTimeline {
         for(String id:e.ids)if(!s.heroes.containsKey(id))return false;
         return true;
     }
+    private static int overlap(String[] first,String[] second){
+        Map<String,Integer> count=new HashMap<>();
+        for(String id:first)count.put(id,count.getOrDefault(id,0)+1);
+        int shared=0;
+        for(String id:second){int n=count.getOrDefault(id,0);if(n>0){shared++;count.put(id,n-1);}}
+        return shared;
+    }
     private static String timestamp(long millis){
         return new SimpleDateFormat("yyyy-MM-dd HH:mm:ss",Locale.ROOT).format(new Date(millis));
     }
@@ -49,7 +56,10 @@ public final class ShopTimeline {
         List<CaptureData.ShopEvent> all=current(game);
         if(all.isEmpty())return "本赛季暂无完整的五格商店观察。需授权屏幕捕获，配置五个商店识别区域和当前商店归属玩家；连续两帧识别一致后才计入。";
         int[] byPlayer=new int[8],byCost=new int[8];Map<String,Integer> appearances=new HashMap<>();
+        String[][] previousByPlayer=new String[8][];int comparisons=0,repeatedSlots=0;
         for(CaptureData.ShopEvent e:all){
+            if(previousByPlayer[e.player]!=null){comparisons++;repeatedSlots+=overlap(previousByPlayer[e.player],e.ids);}
+            previousByPlayer[e.player]=e.ids;
             byPlayer[e.player]++;
             for(String id:e.ids){GameState.Hero h=game.heroes.get(id);if(h.cost>=1&&h.cost<=7)byCost[h.cost]++;appearances.put(id,appearances.getOrDefault(id,0)+1);}
         }
@@ -59,6 +69,9 @@ public final class ShopTimeline {
         out.append("\n费用分布：");
         for(int tier=1;tier<=7;tier++)if(byCost[tier]>0)out.append(tier).append("费 ").append(byCost[tier]).append(" (")
             .append(String.format(Locale.ROOT,"%.1f%%",byCost[tier]*100.0/(all.size()*5))).append(")  ");
+        if(comparisons>0)out.append("\\n相邻两组完整观察的同英雄重合数：平均 ")
+            .append(String.format(Locale.ROOT,"%.2f",repeatedSlots/(double)comparisons))
+            .append("/5（").append(comparisons).append("对样本，不等于连续两次真实刷新）");
         List<Map.Entry<String,Integer>> ranked=new ArrayList<>(appearances.entrySet());
         ranked.sort((a,b)->{int n=Integer.compare(b.getValue(),a.getValue());return n!=0?n:game.heroes.get(a.getKey()).name.compareTo(game.heroes.get(b.getKey()).name);});
         out.append("\n出现次数较多：");
