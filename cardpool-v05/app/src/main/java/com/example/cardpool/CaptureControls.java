@@ -9,6 +9,22 @@ import java.io.*;
 import java.util.*;
 import org.json.JSONObject;
 public final class CaptureControls {
+ public static void quickShopPreset(Activity a) {
+  new AlertDialog.Builder(a).setTitle("一键设置截图五格布局")
+   .setMessage("此布局仅根据你之前的 1536×695 横屏商店截图制作（画面比例约 2.21），其他比例/界面需要手动校准。\\n\\n会覆盖现有截图区域配置，但不会改变玩家持牌、英雄数据库或卡池历史。\\n\\n设置后请点击「绑定当前商店归属玩家」选择玩家，再用「验证一张截图」检查五格位置；低置信或不匹配不会自动记录。")
+   .setNegativeButton("取消",null)
+   .setPositiveButton("载入示例并保存",(dialog,which)->{
+     try{
+       String config=CaptureProfile.SHOP_PRESET_1536;
+       new CaptureProfile(config);
+       a.stopService(new Intent(a,CaptureService.class));
+       if(!a.getSharedPreferences("capture_profile",Context.MODE_PRIVATE).edit()
+          .putString("json",config).putBoolean("configured",true).commit())
+           throw new IOException("保存示例布局失败");
+       Toast.makeText(a,"已保存：请先绑定商店玩家，再验证截图",Toast.LENGTH_LONG).show();
+     }catch(Exception e){new AlertDialog.Builder(a).setTitle("无法保存").setMessage(e.getMessage()).setPositiveButton("关闭",null).show();}
+   }).show();
+ }
  public static void profile(Activity a){LinearLayout form=Editors.form(a);EditText json=Editors.field(a,form,"坐标为相对画面的 left,top,right,bottom（0–1）。先填唯一玩家名 → 0–7 编号。商店:shop.0…4；棋盘:board.0.hero / .star / .equipment。只填实际可见区域。",a.getSharedPreferences("capture_profile",0).getString("json",CaptureProfile.EXAMPLE),true);
   ScrollView scroll=new ScrollView(a);scroll.addView(form);AlertDialog d=new AlertDialog.Builder(a).setTitle("校准截图布局（没有通用官方模板）").setView(scroll).setNegativeButton("取消",null).setNeutralButton("套用商店截图示例",null).setPositiveButton("保存",null).create();d.show();
   d.getButton(-3).setOnClickListener(v->{json.setText(CaptureProfile.SHOP_PRESET_1536);Toast.makeText(a,"已填入1536×695商店示例：需要核对布局、英雄名单及玩家身份",Toast.LENGTH_LONG).show();});d.getButton(-1).setOnClickListener(v->{try{new CaptureProfile(Editors.value(json));
