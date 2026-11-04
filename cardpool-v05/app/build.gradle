@@ -10,8 +10,8 @@ android {
         applicationId 'com.example.cardpool'
         minSdk 26
         targetSdk 35
-        versionCode 6
-        versionName '0.6-capture'
+        versionCode 7
+        versionName '0.6.2-huazhiling'
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
     }
 
