@@ -1,7 +1,7 @@
-name: Build CardPool V0.5 APK
+name: CardPool V0.6 build and screenshot tests
 on:
   workflow_dispatch:
-  push:
+  pull_request:
     paths:
       - 'cardpool-v05/**'
       - '.github/workflows/cardpool-v05.yml'
@@ -9,22 +9,60 @@ permissions:
   contents: read
 jobs:
   build:
-    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 50
     defaults:
       run:
         working-directory: cardpool-v05
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '21'
+          cache: gradle
       - uses: android-actions/setup-android@v3
-      - run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0' 'ndk;27.2.12479018'
+        with:
+          packages: platform-tools
+          log-accepted-android-sdk-licenses: false
+      - uses: actions/cache@v4
+        with:
+          path: |
+            cardpool-v05/work/ocr
+            cardpool-v05/work/ocr-build
+          key: ocr-native-ubuntu24-r27c-tesseract4android490-v1
+      - run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0' 'ndk;27.2.12479018' 'cmake;3.22.1' 
       - run: bash scripts/test.sh
       - run: bash scripts/prepare_signing.sh
-      - run: ANDROID_NDK_HOME="$ANDROID_HOME/ndk/27.2.12479018" bash gradlew --no-daemon :app:assembleDebug :app:lintDebug
-      - uses: actions/upload-artifact@v4
+      - run: ANDROID_NDK_HOME="$ANDROID_HOME/ndk/27.2.12479018" bash gradlew --no-daemon :app:assembleDebug :app:assembleDebugAndroidTest :app:lintDebug
+      - name: Enable emulator acceleration
+        working-directory: .
+        run: sudo chmod 666 /dev/kvm
+      - name: Real bundled OCR and overlay tests on Android 15 emulator
+        uses: reactivecircus/android-emulator-runner@v2
         with:
-          name: cardpool-v05-test-apk
-          path: cardpool-v05/app/build/outputs/apk/debug/app-debug.apk
+          api-level: 35
+          arch: x86_64
+          target: google_apis
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          # android-emulator-runner invokes every script line separately.
+          # Keep the full sequence on one line so shell control flow is not split.
+          script: cd cardpool-v05 && ANDROID_NDK_HOME="$ANDROID_HOME/ndk/27.2.12479018" bash gradlew --no-daemon :app:connectedDebugAndroidTest && adb logcat -d -v brief -s OCR_ACCURACY:I '*:S' > reports/ocr-accuracy.txt && test -s reports/ocr-accuracy.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cardpool-v06-build-and-test-results
+          path: |
+            cardpool-v05/app/build/outputs/apk/debug/app-debug.apk
+            cardpool-v05/app/build/outputs/androidTest-results/**
+            cardpool-v05/app/build/reports/**
+            cardpool-v05/reports/**
+      - name: Verify build artifacts without publishing an APK to the repository
+        run: |
+          test -s app/build/outputs/apk/debug/app-debug.apk
+          test -s reports/ocr-accuracy.txt
+          sha256sum app/build/outputs/apk/debug/app-debug.apk > reports/V06_ACTIONS_SHA256SUMS

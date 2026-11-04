@@ -1,21 +1,27 @@
-name: Build CardPool V0.5 APK
+# Standalone-project reference: for the current repository use root .github/workflows/cardpool-v05.yml
+name: CardPool V0.6 build and screenshot tests
 on:
   workflow_dispatch:
-  push:
+  pull_request:
     paths:
       - 'app/**'
       - 'tests/**'
       - 'scripts/**'
-      - '*.gradle'
-      - 'gradle/**'
       - '.github/workflows/build-apk.yml'
 permissions:
-  contents: read
+  contents: write
 jobs:
   build:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
+    timeout-minutes: 35
+    defaults:
+      run:
+        working-directory: cardpool-v05
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -24,8 +30,38 @@ jobs:
       - run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0' 'ndk;27.2.12479018'
       - run: bash scripts/test.sh
       - run: bash scripts/prepare_signing.sh
-      - run: ANDROID_NDK_HOME="$ANDROID_HOME/ndk/27.2.12479018" bash gradlew --no-daemon :app:assembleDebug :app:lintDebug
-      - uses: actions/upload-artifact@v4
+      - run: ANDROID_NDK_HOME="$ANDROID_HOME/ndk/27.2.12479018" bash gradlew --no-daemon :app:assembleDebug :app:assembleDebugAndroidTest :app:lintDebug
+      - name: Enable emulator acceleration
+        working-directory: .
+        run: sudo chmod 666 /dev/kvm
+      - name: Real bundled OCR and overlay tests on Android 15 emulator
+        uses: reactivecircus/android-emulator-runner@v2
         with:
-          name: cardpool-v05-test-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
+          api-level: 35
+          arch: x86_64
+          target: google_apis
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: |
+            cd cardpool-v05 && ANDROID_NDK_HOME="$ANDROID_HOME/ndk/27.2.12479018" bash gradlew --no-daemon :app:connectedDebugAndroidTest
+            adb pull /sdcard/Android/data/com.example.cardpool/files/ocr-accuracy.txt cardpool-v05/reports/ocr-accuracy.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cardpool-v06-build-and-test-results
+          path: |
+            cardpool-v05/app/build/outputs/apk/debug/app-debug.apk
+            cardpool-v05/app/build/outputs/androidTest-results/**
+            cardpool-v05/app/build/reports/**
+            cardpool-v05/reports/**
+      - name: Save Actions-built APK and measured OCR report
+        env:
+          TASK_BRANCH: ${{ github.head_ref || github.ref_name }}
+        run: |
+          cp app/build/outputs/apk/debug/app-debug.apk downloads/JCC_CardPool_0.6_actions.apk
+          sha256sum downloads/JCC_CardPool_0.6_actions.apk > downloads/V06_ACTIONS_SHA256SUMS
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add downloads/JCC_CardPool_0.6_actions.apk downloads/V06_ACTIONS_SHA256SUMS reports/ocr-accuracy.txt
+          git diff --cached --quiet || git commit -m 'Save Actions-built V0.6 APK and measured OCR results [skip ci]'
+          git push origin "HEAD:$TASK_BRANCH"

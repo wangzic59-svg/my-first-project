@@ -1,0 +1,6 @@
+This app uses Tesseract4Android 4.9.0 (Tesseract 5.5.1) under Apache License 2.0,
+and its bundled Leptonica, libjpeg-turbo and libpng dependencies under their
+respective BSD-style licenses. It uses tesseract-ocr/tessdata_fast English and
+Simplified Chinese models (Apache License 2.0). Dependency source and training
+model revisions and SHA256 checksums are pinned in scripts/prepare_ocr.py.
+No recognition models or screenshots are downloaded/uploaded at runtime.
