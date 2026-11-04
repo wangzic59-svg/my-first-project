@@ -42,6 +42,33 @@ public class V06Test {
   imported.players[0].units.add(new GameState.Holding("ahri",1,1,""));
   boolean preserved=false;try{SeasonRosterCsv.apply(imported,SeasonRosterCsv.parse("shen,慎,1,29"));}catch(IllegalArgumentException ignored){preserved=true;}
   ok(preserved&&imported.heroes.containsKey("ahri"),"CSV missing held hero cannot delete existing data");
+
+  GameState timeline=new GameState();timeline.season="英雄联盟传奇普通模式";
+  for(String id:new String[]{"s_a","s_b","s_c"})timeline.heroes.put(id,new GameState.Hero(id,id,1,0));
+  ObservationGate.Frame firstShop=new ObservationGate.Frame();firstShop.time=100;firstShop.player=0;firstShop.identityConfidence=.99;
+  Map<String,ObservationGate.Token> complete=new LinkedHashMap<>();
+  for(int slot=0;slot<5;slot++)complete.put("shop."+slot,new ObservationGate.Token("s_a",.99));
+  Map<String,ObservationGate.Token> partial=new LinkedHashMap<>(complete);partial.remove("shop.4");
+  ok(!ShopTimeline.record(timeline,firstShop,partial),"partial shops must not enter timeline");
+  ok(ShopTimeline.record(timeline,firstShop,complete),"full confirmed shop logged");
+  firstShop.time=101;ok(!ShopTimeline.record(timeline,firstShop,complete),"unchanged shop not double counted");
+  complete.put("shop.4",new ObservationGate.Token("s_b",.99));
+  firstShop.time=102;ok(ShopTimeline.record(timeline,firstShop,complete),"changed visible shop logged");
+  ok(ShopTimeline.current(timeline).size()==2,"two confirmed distinct shop snapshots retained");
+  ok(ShopTimeline.report(timeline).contains("不是实际刷新次数"),"report never invents paid refreshes");
+  ok(ShopTimeline.csv(timeline).contains("slot5_name"),"CSV export contains per-slot observations");
+  firstShop.player=1;firstShop.time=103;firstShop.identityConfidence=.5;
+  ok(!ShopTimeline.record(timeline,firstShop,complete),"untrusted identity not logged");
+  firstShop.identityConfidence=.99;
+  ok(ShopTimeline.record(timeline,firstShop,complete),"independent player shop timeline");
+  for(int i=0;i<170;i++){
+   ObservationGate.Frame next=new ObservationGate.Frame();next.player=0;next.time=1000+i;next.identityConfidence=.99;
+   int value=i;
+   for(int slot=0;slot<5;slot++){String id=new String[]{"s_a","s_b","s_c"}[value%3];value/=3;complete.put("shop."+slot,new ObservationGate.Token(id,.99));}
+   ShopTimeline.record(timeline,next,complete);
+  }
+  ok(timeline.capture.shopHistory.size()==ShopTimeline.MAX_EVENTS,"history bound prevents unbounded on-device storage");
+  GameState copyWithHistory=timeline.copy();ok(copyWithHistory.capture.shopHistory.size()==ShopTimeline.MAX_EVENTS,"history survives serialization");
   ObservationGate.Frame ambiguous=f(1,7,"gold","99",.99);ambiguous.identityConfidence=.5;ok(gate.accepted(ambiguous).isEmpty(),"ambiguous identity never overwrites");ok(gate.accepted(f(1,6,"gold","50",.99)).isEmpty(),"out of order rejected");
   ok(ObservationGate.scalar("level","12")==null,"level range");ok(ObservationGate.scalar("gold","5O")==null,"no digit hallucination");ok(ObservationGate.scalar("hp","100")==100,"valid numeric");ok(ObservationGate.scalar("level","0")==null,"unknown level not observed");
   Map<String,String> aliases=new LinkedHashMap<>();aliases.put("Alice","0");aliases.put("A lice","1");ok(ObservationGate.exact("Alice",aliases)==null,"ambiguous normalized alias rejected");
