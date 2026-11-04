@@ -5,6 +5,17 @@ import java.util.*;
 public final class CaptureData implements Serializable {
  private static final long serialVersionUID=6L;
  public final Player[] players=new Player[8];
+ /** New fields may be null after loading an older Java-serialized V0.5/V0.6 save. */
+ public List<ShopEvent> shopHistory=new ArrayList<>();
+ public void ensureHistory(){if(shopHistory==null)shopHistory=new ArrayList<>();}
+ public static final class ShopEvent implements Serializable {
+  private static final long serialVersionUID=1L;
+  public final long time;public final int player;public final String season;public final String[] ids;
+  public ShopEvent(long at,int index,String seasonName,String[] heroes){
+   time=at;player=index;season=seasonName;ids=heroes.clone();
+  }
+ }
+
  public final Set<String> targets=new LinkedHashSet<>();
  public boolean autoMerge=false, autoBoard=false;
  public String status="未采集",lastReview="";
