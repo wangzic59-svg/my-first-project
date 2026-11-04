@@ -17,6 +17,19 @@ public final class ShopDiagnostic {
         return compact.length()>64?compact.substring(0,64):compact;
     }
 
+    /** Only Unicode-width, whitespace, and punctuation normalization; never OCR fuzzy repair. */
+    public static String canonicalExact(String raw,Map<String,String> namesToIds){
+        String key=clean(raw);
+        if(key.isEmpty())return null;
+        String found=null;
+        for(Map.Entry<String,String> entry:namesToIds.entrySet()){
+            if(!clean(entry.getKey()).equals(key))continue;
+            if(found!=null&&!found.equals(entry.getValue()))return null;
+            found=entry.getValue();
+        }
+        return found;
+    }
+
     // One code point wrong/omitted/added: only a review hint, NEVER an auto-match.
     static int distanceAtMostOne(String x,String y) {
         int[] a=x.codePoints().toArray(),b=y.codePoints().toArray();
