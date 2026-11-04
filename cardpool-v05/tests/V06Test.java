@@ -14,6 +14,9 @@ public class V06Test {
   SeasonRosterCsv.Parsed csv=SeasonRosterCsv.parse("# season=测试赛季\nid,name,cost,total\nahri,阿狸,4,0\nshen,慎,1,29\n");
   ok(csv.heroes.size()==2&&csv.missingTotals==1,"CSV roster parses heroes and flags unknown totals");
   GameState imported=new GameState();SeasonRosterCsv.apply(imported,csv);
+  ok(!SeasonAudit.totalsKnown(imported)&&SeasonAudit.missingTotals(imported)==1,"unknown pool totals fail audit");
+  ok(SeasonAudit.report(imported).contains("不能用未知总量推算")||SeasonAudit.report(imported).contains("不完整"),"audit explains incomplete season data");
+
   ok(imported.heroes.size()==2&&!imported.rosterComplete&&imported.target.equals("ahri"),"CSV import does not claim complete verified rules");
   imported.players[0].units.add(new GameState.Holding("ahri",1,1,""));
   boolean preserved=false;try{SeasonRosterCsv.apply(imported,SeasonRosterCsv.parse("shen,慎,1,29"));}catch(IllegalArgumentException ignored){preserved=true;}
