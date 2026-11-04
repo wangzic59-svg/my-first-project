@@ -36,6 +36,7 @@ public final class SeasonAudit {
    else{if(unknown.length()>0)unknown.append("、");unknown.append(level);}
   }
   b.append("已填写刷新概率等级：").append(valid).append("/11\n");
+  b.append("费用概率来源：").append(s.oddsSource==null?"未知":s.oddsSource).append("\n");
   if(unknown.length()>0)b.append("尚无完整概率：").append(unknown).append("级\n");
   if(s.season.contains("英雄联盟传奇"))b.append("特殊机制：解锁弈子共享卡池、锁定商店右侧栏位与7费英雄未接入模型。即使填满普通概率表也不能证明估算有效。\n");
   b.append("名单及同费分母确认：").append(s.rosterComplete?"用户已勾选":"尚未勾选").append("\n");
