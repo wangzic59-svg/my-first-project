@@ -57,6 +57,7 @@ public final class Editors {
             for(String line:value(roster).split("\\n")){if(line.trim().isEmpty())continue;String[] a=line.split(",",-1);if(a.length!=4)throw new IllegalArgumentException("英雄行需要四列");String id=a[0].trim();if(next.containsKey(id))throw new IllegalArgumentException("英雄ID重复");next.put(id,new GameState.Hero(id,a[1].trim(),Integer.parseInt(a[2].trim()),Integer.parseInt(a[3].trim())));}
             x.heroes.clear();x.heroes.putAll(next);x.odds=new double[12][5];Set<Integer> seen=new HashSet<>();
             for(String line:value(rates).split("\\n")){if(line.trim().isEmpty())continue;String[] a=line.split(",",-1);if(a.length!=6)throw new IllegalArgumentException("概率行需要等级及五个费用");int level=Integer.parseInt(a[0].trim());if(level<1||level>11||!seen.add(level))throw new IllegalArgumentException("等级重复或超出1–11");for(int i=0;i<5;i++)x.odds[level][i]=Double.parseDouble(a[i+1].trim())/100;}
+            x.oddsSource="手动编辑商店概率（当前版本待自行核对）";
             x.rosterComplete=complete.isChecked();x.independentSlots=independent.isChecked();x.slots=num(slots);x.refreshCost=num(cost);x.season=value(name);
             if(!x.heroes.containsKey(x.target))x.target=x.heroes.isEmpty()?"":x.heroes.keySet().iterator().next();
         });
