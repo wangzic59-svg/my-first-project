@@ -69,7 +69,7 @@ public final class ShopTimeline {
         out.append("\n费用分布：");
         for(int tier=1;tier<=7;tier++)if(byCost[tier]>0)out.append(tier).append("费 ").append(byCost[tier]).append(" (")
             .append(String.format(Locale.ROOT,"%.1f%%",byCost[tier]*100.0/(all.size()*5))).append(")  ");
-        if(comparisons>0)out.append("\\n相邻两组完整观察的同英雄重合数：平均 ")
+        if(comparisons>0)out.append("\n相邻两组完整观察的同英雄重合数：平均 ")
             .append(String.format(Locale.ROOT,"%.2f",repeatedSlots/(double)comparisons))
             .append("/5（").append(comparisons).append("对样本，不等于连续两次真实刷新）");
         List<Map.Entry<String,Integer>> ranked=new ArrayList<>(appearances.entrySet());
