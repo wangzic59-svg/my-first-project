@@ -36,6 +36,15 @@ public final class CaptureControls {
   if(!any)out.append("暂无双帧确认的英雄。请先配置真实英雄名单、正确区域并验证截图。");
   return out.toString();
  }
+ public static void clearShopHistory(Activity a,DataManager m){
+  new AlertDialog.Builder(a).setTitle("清空已观察商店变化？")
+   .setMessage("仅删除当前设备保存的五格商店变化历史。不会删除手动持牌、玩家资料或OCR校准。建议开始新对局时清空，避免跨对局样本混杂。")
+   .setNegativeButton("取消",null)
+   .setPositiveButton("清空",(d,w)->{
+     m.mutate(s->{s.capture.ensureHistory();s.capture.shopHistory.clear();});
+     Toast.makeText(a,"商店观察历史已清空",Toast.LENGTH_SHORT).show();
+   }).show();
+ }
  public static void shopOwner(Activity a){
   String[] choices=new String[9];choices[0]="不绑定（必须从截图识别玩家名）";
   for(int i=0;i<8;i++)choices[i+1]="当前商店属于玩家"+(i+1)+"（只关联五格商店）";
