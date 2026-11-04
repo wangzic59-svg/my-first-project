@@ -23,6 +23,10 @@ public class V06Test {
   ok(csv.heroes.size()==2&&csv.missingTotals==1,"CSV roster parses heroes and flags unknown totals");
   GameState imported=new GameState();SeasonRosterCsv.apply(imported,csv);
   ok(!SeasonAudit.totalsKnown(imported)&&SeasonAudit.missingTotals(imported)==1,"unknown pool totals fail audit");
+  ok(imported.poolText().contains("总量未核实"),"unknown pool never rendered as zero remaining");
+  imported.rosterComplete=true;
+  ok(Prediction.explain(imported).contains("未核实的英雄总张数"),"prediction blocked despite user-complete tick when totals missing");
+  imported.rosterComplete=false;
   ok(SeasonAudit.report(imported).contains("不能用未知总量推算")||SeasonAudit.report(imported).contains("不完整"),"audit explains incomplete season data");
 
   ok(imported.heroes.size()==2&&!imported.rosterComplete&&imported.target.equals("ahri"),"CSV import does not claim complete verified rules");
