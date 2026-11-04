@@ -11,6 +11,13 @@ public class V06Test {
   ok(shopGate.accepted(f(2,10,"shop.0","ahri",.99)).isEmpty(),"shop needs two consecutive frames");
   ok(shopGate.accepted(f(2,11,"shop.0","ahri",.99)).containsKey("shop.0"),"stable shop candidate confirmed");
   ok(shopGate.accepted(f(2,12,"shop.0","未匹配：阿狸",0)).isEmpty(),"unmatched shop candidate never confirmed");
+  SeasonRosterCsv.Parsed csv=SeasonRosterCsv.parse("# season=测试赛季\nid,name,cost,total\nahri,阿狸,4,0\nshen,慎,1,29\n");
+  ok(csv.heroes.size()==2&&csv.missingTotals==1,"CSV roster parses heroes and flags unknown totals");
+  GameState imported=new GameState();SeasonRosterCsv.apply(imported,csv);
+  ok(imported.heroes.size()==2&&!imported.rosterComplete&&imported.target.equals("ahri"),"CSV import does not claim complete verified rules");
+  imported.players[0].units.add(new GameState.Holding("ahri",1,1,""));
+  boolean preserved=false;try{SeasonRosterCsv.apply(imported,SeasonRosterCsv.parse("shen,慎,1,29"));}catch(IllegalArgumentException ignored){preserved=true;}
+  ok(preserved&&imported.heroes.containsKey("ahri"),"CSV missing held hero cannot delete existing data");
   ObservationGate.Frame ambiguous=f(1,7,"gold","99",.99);ambiguous.identityConfidence=.5;ok(gate.accepted(ambiguous).isEmpty(),"ambiguous identity never overwrites");ok(gate.accepted(f(1,6,"gold","50",.99)).isEmpty(),"out of order rejected");
   ok(ObservationGate.scalar("level","12")==null,"level range");ok(ObservationGate.scalar("gold","5O")==null,"no digit hallucination");ok(ObservationGate.scalar("hp","100")==100,"valid numeric");ok(ObservationGate.scalar("level","0")==null,"unknown level not observed");
   String csv="# season=用户核对后的赛季\\nid,name,cost,total\\nshen,慎,1,0\\njhin,烬,1,0\\n";
