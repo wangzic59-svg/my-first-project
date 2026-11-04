@@ -43,7 +43,7 @@ public class MainActivity extends Activity implements DataManager.Listener {
                 for(GameState.Holding h:p.units)detail.append(s.heroes.get(h.hero).name).append(" ").append(h.star).append("★ ×").append(h.count).append(" · ").append(h.equipment).append("\n");
                 detail.append("阵容：").append(p.lineup).append("\n装备：").append(p.equipment);body.addView(text(detail.toString(),14));
             }
-        }else if(tab==1){action("从CSV文件导入赛季英雄名单",this::pickRoster);action("配置赛季完整卡池与刷新规则",()->Editors.rules(this,manager));action("编辑目标英雄未归属观察",()->Editors.unknown(this,manager));body.addView(text(s.poolText(),16));}
+        }else if(tab==1){action("从CSV文件导入赛季英雄名单",this::pickRoster);action("配置赛季完整卡池与刷新规则",()->Editors.rules(this,manager));action("编辑目标英雄未归属观察",()->Editors.unknown(this,manager));body.addView(text(SeasonAudit.report(s),14));body.addView(text(s.poolText(),16));}
         else if(tab==2){action("多目标英雄",()->CaptureControls.targets(this,manager));action("选择预测玩家（当前玩家"+(s.selectedPlayer+1)+"）",()->Editors.choosePlayer(this,manager));action("配置刷新规则",()->Editors.rules(this,manager));body.addView(text(CaptureControls.predictions(s),17));body.addView(text("数据来源：手动 / 模拟 / 用户授权截图。实际可见商店与概率预测分开；没有下一轮真实商店接口。无需 ROOT，不访问游戏进程。",13));}
         else {
             action("校准识别区域与8名玩家别名",()->CaptureControls.profile(this));
