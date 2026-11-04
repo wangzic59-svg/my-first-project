@@ -11,6 +11,8 @@ import android.view.*;
 import android.widget.*;
 import java.text.DateFormat;
 import java.util.Date;
+import java.io.*;
+import java.nio.charset.StandardCharsets;
 
 public class MainActivity extends Activity implements DataManager.Listener {
     private DataManager manager;private LinearLayout body;private TextView status;private int tab=0;private boolean awaiting=false;
@@ -41,7 +43,7 @@ public class MainActivity extends Activity implements DataManager.Listener {
                 for(GameState.Holding h:p.units)detail.append(s.heroes.get(h.hero).name).append(" ").append(h.star).append("★ ×").append(h.count).append(" · ").append(h.equipment).append("\n");
                 detail.append("阵容：").append(p.lineup).append("\n装备：").append(p.equipment);body.addView(text(detail.toString(),14));
             }
-        }else if(tab==1){action("配置赛季完整卡池与刷新规则",()->Editors.rules(this,manager));action("编辑目标英雄未归属观察",()->Editors.unknown(this,manager));body.addView(text(s.poolText(),16));}
+        }else if(tab==1){action("从CSV文件导入赛季英雄名单",this::pickRoster);action("配置赛季完整卡池与刷新规则",()->Editors.rules(this,manager));action("编辑目标英雄未归属观察",()->Editors.unknown(this,manager));body.addView(text(s.poolText(),16));}
         else if(tab==2){action("多目标英雄",()->CaptureControls.targets(this,manager));action("选择预测玩家（当前玩家"+(s.selectedPlayer+1)+"）",()->Editors.choosePlayer(this,manager));action("配置刷新规则",()->Editors.rules(this,manager));body.addView(text(CaptureControls.predictions(s),17));body.addView(text("数据来源：手动 / 模拟 / 用户授权截图。实际可见商店与概率预测分开；没有下一轮真实商店接口。无需 ROOT，不访问游戏进程。",13));}
         else {
             action("校准识别区域与8名玩家别名",()->CaptureControls.profile(this));
@@ -60,6 +62,7 @@ public class MainActivity extends Activity implements DataManager.Listener {
             body.addView(text(s.capture.text(System.currentTimeMillis()),14));
         }
     }
+    private void pickRoster(){Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT).setType("*/*").addCategory(Intent.CATEGORY_OPENABLE);startActivityForResult(i,69);}
     private void pickImage(int request){Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT).setType("image/*").addCategory(Intent.CATEGORY_OPENABLE);startActivityForResult(i,request);}
     private void captureAction(String action){startService(new Intent(this,CaptureService.class).setAction(action));}
     private void startCapture(){
@@ -71,6 +74,7 @@ public class MainActivity extends Activity implements DataManager.Listener {
     }
     @Override protected void onActivityResult(int request,int result,Intent data){super.onActivityResult(request,result,data);
         if(request==66){if(result==RESULT_OK&&data!=null)startForegroundService(new Intent(this,CaptureService.class).setAction(CaptureService.START).putExtra("result",result).putExtra("consent",data));else Toast.makeText(this,"未授权，不进行屏幕捕获",Toast.LENGTH_LONG).show();}
+        else if(request==69&&result==RESULT_OK&&data!=null){importRoster(data.getData());}
         else if((request==67||request==68)&&result==RESULT_OK&&data!=null){
             if(request==68)CaptureControls.template(this,data.getData());
             else {final Uri uri=data.getData();Toast.makeText(this,"正在本地验证截图…",Toast.LENGTH_SHORT).show();new Thread(()->{
@@ -82,6 +86,27 @@ public class MainActivity extends Activity implements DataManager.Listener {
                 }}catch(Exception e){handler.post(()->Toast.makeText(this,"验证失败："+e.getMessage(),Toast.LENGTH_LONG).show());}finally{if(image!=null)image.recycle();}
             },"screenshot-validation").start();}
         }
+    }
+    private void importRoster(Uri uri){
+        try{
+            ByteArrayOutputStream out=new ByteArrayOutputStream();
+            try(InputStream in=getContentResolver().openInputStream(uri)){
+                if(in==null)throw new IOException("无法打开文件");
+                byte[] buffer=new byte[8192];int count;
+                while((count=in.read(buffer))!=-1){if(out.size()+count>512000)throw new IOException("文件超过500KB");out.write(buffer,0,count);}
+            }
+            SeasonRosterCsv.Parsed parsed=SeasonRosterCsv.parse(new String(out.toByteArray(),StandardCharsets.UTF_8));
+            String intro="来源：本地CSV（未自动验证赛季）\\n赛季："+(parsed.season.isEmpty()?"未填写，保留现有赛季":parsed.season)
+                +"\\n英雄数量："+parsed.heroes.size()+"\\n未验证总张数："+parsed.missingTotals
+                +"\\n导入不会修改各等级商店概率。需另外核对卡池总量、特殊模式及刷新规则。已有持牌被新名单遗漏时会拒绝导入。";
+            new AlertDialog.Builder(this).setTitle("预览并确认赛季名单")
+              .setMessage(intro).setNegativeButton("取消",null)
+              .setPositiveButton("确认导入", (dialog,which)->{
+                  try{manager.mutate(s->SeasonRosterCsv.apply(s,parsed));
+                      Toast.makeText(this,"已导入 "+parsed.heroes.size()+" 位英雄；概率和总量仍需核对",Toast.LENGTH_LONG).show();
+                  }catch(Exception e){new AlertDialog.Builder(this).setTitle("未导入").setMessage(e.getMessage()).setPositiveButton("确定",null).show();}
+              }).show();
+        }catch(Exception e){new AlertDialog.Builder(this).setTitle("CSV文件导入失败").setMessage(e.getMessage()).setPositiveButton("确定",null).show();}
     }
     private void startOverlay(){if(!Settings.canDrawOverlays(this)){awaiting=true;startActivity(new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,Uri.parse("package:"+getPackageName())));return;}
         if(Build.VERSION.SDK_INT>=33&&checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED)requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS},10);
