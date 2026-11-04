@@ -45,6 +45,9 @@ public class MainActivity extends Activity implements DataManager.Listener {
         else if(tab==2){action("多目标英雄",()->CaptureControls.targets(this,manager));action("选择预测玩家（当前玩家"+(s.selectedPlayer+1)+"）",()->Editors.choosePlayer(this,manager));action("配置刷新规则",()->Editors.rules(this,manager));body.addView(text(CaptureControls.predictions(s),17));body.addView(text("数据来源：手动 / 模拟 / 用户授权截图。实际可见商店与概率预测分开；没有下一轮真实商店接口。无需 ROOT，不访问游戏进程。",13));}
         else {
             action("校准识别区域与8名玩家别名",()->CaptureControls.profile(this));
+            action("绑定当前商店归属玩家（仅五张棋子）",()->CaptureControls.shopOwner(this));
+            body.addView(text("商店自动识别：先配置包含正确名称和费用的英雄名单，再选择商店截图示例布局并核对；玩家名字被商店遮挡时可手动绑定。未匹配的OCR结果只供核对，不会写入。",13));
+            body.addView(text(CaptureControls.shopSummary(s),14));
             action("从截图录入英雄/星级/装备图像模板",()->pickImage(68));
             action("验证一张截图（不写入对局）",()->pickImage(67));
             action("开始：请求系统屏幕捕获授权",this::startCapture);
