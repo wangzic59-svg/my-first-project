@@ -56,7 +56,7 @@ public final class ScreenRecognizer implements AutoCloseable {
      if(valid){f.fields.put(key,matched);continue;}
     }
     boolean numeric=key.equals("gold")||key.equals("level")||key.equals("hp")||key.endsWith(".star");Map<String,String> vocabulary=key.equals("player")?profile.players:key.endsWith(".equipment")?profile.equipment:heroes;
-    ObservationGate.Token token=recognize(crop,!numeric&&hasHan(vocabulary),numeric);String raw=token.text,value=raw;
+    ObservationGate.Token token=recognize(crop,!numeric&&(key.startsWith("shop.")||hasHan(vocabulary)),numeric);String raw=token.text,value=raw;
     if(key.equals("player")){String id=ObservationGate.exact(raw,profile.players);if(id!=null){f.player=Integer.parseInt(id);f.identityConfidence=token.confidence;}continue;}
     if(key.equals("gold")||key.equals("level")||key.equals("hp")){if(ObservationGate.scalar(key,raw)==null)continue;}
     else if(key.startsWith("shop.")||key.endsWith(".hero")){value=ObservationGate.exact(raw,heroes);if(value==null){
