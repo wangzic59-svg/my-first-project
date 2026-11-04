@@ -30,6 +30,30 @@ public class V06Test {
 
 
   ok(csv.heroes.size()==2&&csv.missingTotals==1,"CSV roster parses heroes and flags unknown totals");
+  GameState shopOddsState=new GameState();
+  shopOddsState.heroes.put("test",new GameState.Hero("test","测试目标",2,0));
+  shopOddsState.target="test";
+  shopOddsState.rosterComplete=false;
+  ShopOddsPreset.apply(shopOddsState,true);
+  ok(ShopOddsPreset.configured(shopOddsState,7)&&Math.abs(shopOddsState.odds[7][0]-.16)<1e-12
+    &&Math.abs(shopOddsState.odds[7][2]-.43)<1e-12,"16.4 reference level 7 odds");
+  ok(Math.abs(shopOddsState.odds[8][3]-.30)<1e-12
+    &&Math.abs(shopOddsState.odds[9][4]-.15)<1e-12,"reference cost odds tiers 8 and 9");
+  ok(!shopOddsState.rosterComplete&&shopOddsState.heroes.get("test").total==0,
+    "cost-tier odds preset never fabricates verified hero pool totals");
+  ok(ShopOddsPreset.summary(shopOddsState).contains("16.4"),"reference source shown in UI");
+  GameState oldOdds=shopOddsState.copy();
+  ShopOddsPreset.apply(oldOdds,false);
+  ok(Math.abs(oldOdds.odds[7][0]-.19)<1e-12
+    &&Math.abs(oldOdds.odds[7][2]-.40)<1e-12,"pre-16.4 level 7 odds distinguished");
+  ok(!ShopOddsPreset.configured(new GameState(),7),"unconfigured odds explicit");
+  GameState serializedOdds=shopOddsState.copy();
+  ok(serializedOdds.oddsSource.contains("16.4"),"odds source persisted across serialization");
+  SeasonRosterCsv.Parsed newSeason=SeasonRosterCsv.parse("# season=另一个赛季\\nid,name,cost,total\\ntest,测试目标,2,0\\n");
+  SeasonRosterCsv.apply(shopOddsState,newSeason);
+  ok(!ShopOddsPreset.configured(shopOddsState,7)&&shopOddsState.oddsSource.contains("切换赛季"),
+    "different season resets stale shop odds");
+
   GameState imported=new GameState();SeasonRosterCsv.apply(imported,csv);
   ok(!SeasonAudit.totalsKnown(imported)&&SeasonAudit.missingTotals(imported)==1,"unknown pool totals fail audit");
   ok(imported.poolText().contains("总量未核实"),"unknown pool never rendered as zero remaining");
