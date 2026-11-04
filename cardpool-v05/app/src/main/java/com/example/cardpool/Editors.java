@@ -46,7 +46,7 @@ public final class Editors {
     public static void rules(Context c,DataManager m){if(!writable(c,m))return;GameState s=m.snapshot();LinearLayout f=form(c);
         EditText name=field(c,f,"赛季 / 规则版本（请依据当前游戏配置）",s.season,false);
         StringBuilder heroes=new StringBuilder();for(GameState.Hero h:s.heroes.values())heroes.append(h.id).append(",").append(h.name).append(",").append(h.cost).append(",").append(h.total).append("\n");
-        EditText roster=field(c,f,"完整英雄名单，每行：稳定ID,名称,费用1–5,该英雄总张数\n迁移英雄 legacy 请保留 ID，并补全费用；不可删除仍有持牌记录的英雄。",heroes.toString(),true);
+        EditText roster=field(c,f,"完整英雄名单，每行：稳定ID,名称,费用1–7,该英雄总张数\n迁移英雄 legacy 请保留 ID，并补全费用；不可删除仍有持牌记录的英雄。",heroes.toString(),true);
         StringBuilder odds=new StringBuilder();for(int i=1;i<=11;i++){odds.append(i);for(double n:s.odds[i])odds.append(",").append(n*100);odds.append("\n");}
         EditText rates=field(c,f,"每行：等级,1费%,2费%,3费%,4费%,5费%\n每级合计100；未知等级可全0。不内置未经核实的官方赛季表。",odds.toString(),true);
         CheckBox complete=new CheckBox(c);complete.setText("已核对完整名单，同费剩余分母包含所有英雄");complete.setChecked(s.rosterComplete);f.addView(complete);
