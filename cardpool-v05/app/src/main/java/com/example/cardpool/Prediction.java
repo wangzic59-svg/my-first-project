@@ -4,7 +4,11 @@ public final class Prediction {
     public static String explain(GameState s){try{
         s.validate();
         if(s.season.contains("英雄联盟传奇"))
-            return "英雄联盟传奇概率暂不可用：本赛季存在可解锁弈子、解锁后固定商店栏位及特殊的7费弈子。当前普通1–5费模型不能准确计算，需要实现并核实逐玩家解锁条件与新赛季卡池规则。商店截图识别与八人持牌统计仍可测试。";
+            return (ShopOddsPreset.configured(s,s.players[s.selectedPlayer].level)
+                ?"已配置当前玩家等级的1–5费参考刷新比例，但它不是指定英雄的出现概率。"
+                :"当前玩家等级的基础费用刷新概率尚未配置或玩家等级未知。")
+                +"\\n指定英雄概率尚不能可靠计算：解锁棋子、固定右侧栏位、7费传说英雄、卡池完整性和当前版本差异都可能改变实际概率。"
+                +"\\n仍可正常使用非ROOT屏幕识别、商店观察记录和八人持牌统计。";
         for(GameState.Hero hero:s.heroes.values())if(hero.cost>5)
             return "预测不可用：当前普通商店计算器暂不支持6费或7费弈子，不能将其错误算作5费。";
 
