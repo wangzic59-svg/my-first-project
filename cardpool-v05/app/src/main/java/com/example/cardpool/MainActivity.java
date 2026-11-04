@@ -50,6 +50,9 @@ public class MainActivity extends Activity implements DataManager.Listener {
             action("绑定当前商店归属玩家（仅五张棋子）",()->CaptureControls.shopOwner(this));
             body.addView(text("商店自动识别：先配置包含正确名称和费用的英雄名单，再选择商店截图示例布局并核对；玩家名字被商店遮挡时可手动绑定。未匹配的OCR结果只供核对，不会写入。",13));
             body.addView(text(CaptureControls.shopSummary(s),14));
+            body.addView(text(ShopTimeline.report(s),14));
+            action("导出已观察的商店变化 CSV",this::exportShopHistory);
+            action("清空商店变化历史（新对局）",()->CaptureControls.clearShopHistory(this,manager));
             action("从截图录入英雄/星级/装备图像模板",()->pickImage(68));
             action("验证一张截图（不写入对局）",()->pickImage(67));
             action("开始：请求系统屏幕捕获授权",this::startCapture);
@@ -77,6 +80,28 @@ public class MainActivity extends Activity implements DataManager.Listener {
             }).show();
         }catch(Exception e){Toast.makeText(this,"内置名单读取失败："+e.getMessage(),Toast.LENGTH_LONG).show();}
     }
+    private void exportShopHistory(){
+        GameState state=manager.snapshot();
+        if(ShopTimeline.current(state).isEmpty()){
+            Toast.makeText(this,"尚无完整商店观察记录，无法导出",Toast.LENGTH_LONG).show();
+            return;
+        }
+        Intent i=new Intent(Intent.ACTION_CREATE_DOCUMENT).setType("text/csv")
+            .addCategory(Intent.CATEGORY_OPENABLE)
+            .putExtra(Intent.EXTRA_TITLE,"cardpool_observed_shops.csv");
+        startActivityForResult(i,70);
+    }
+    private void saveShopHistory(Uri uri){
+        try{
+            if(uri==null)throw new IOException("没有选择保存位置");
+            String csv=ShopTimeline.csv(manager.snapshot());
+            try(OutputStream out=getContentResolver().openOutputStream(uri)){
+                if(out==null)throw new IOException("无法写入目标文件");
+                out.write(csv.getBytes(StandardCharsets.UTF_8));out.flush();
+            }
+            Toast.makeText(this,"可见商店记录已导出；CSV不包含截图或隐藏游戏数据",Toast.LENGTH_LONG).show();
+        }catch(Exception e){new AlertDialog.Builder(this).setTitle("导出失败").setMessage(e.getMessage()).setPositiveButton("确定",null).show();}
+    }
     private void pickRoster(){Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT).setType("*/*").addCategory(Intent.CATEGORY_OPENABLE);startActivityForResult(i,69);}
     private void pickImage(int request){Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT).setType("image/*").addCategory(Intent.CATEGORY_OPENABLE);startActivityForResult(i,request);}
     private void captureAction(String action){startService(new Intent(this,CaptureService.class).setAction(action));}
@@ -90,6 +115,7 @@ public class MainActivity extends Activity implements DataManager.Listener {
     @Override protected void onActivityResult(int request,int result,Intent data){super.onActivityResult(request,result,data);
         if(request==66){if(result==RESULT_OK&&data!=null)startForegroundService(new Intent(this,CaptureService.class).setAction(CaptureService.START).putExtra("result",result).putExtra("consent",data));else Toast.makeText(this,"未授权，不进行屏幕捕获",Toast.LENGTH_LONG).show();}
         else if(request==69&&result==RESULT_OK&&data!=null){importRoster(data.getData());}
+        else if(request==70&&result==RESULT_OK&&data!=null){saveShopHistory(data.getData());}
         else if((request==67||request==68)&&result==RESULT_OK&&data!=null){
             if(request==68)CaptureControls.template(this,data.getData());
             else {final Uri uri=data.getData();Toast.makeText(this,"正在本地验证截图…",Toast.LENGTH_SHORT).show();new Thread(()->{
