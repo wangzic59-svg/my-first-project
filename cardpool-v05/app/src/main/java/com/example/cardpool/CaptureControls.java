@@ -7,11 +7,31 @@ import android.os.*;
 import android.widget.*;
 import java.io.*;
 import java.util.*;
+import org.json.JSONObject;
 public final class CaptureControls {
  public static void profile(Activity a){LinearLayout form=Editors.form(a);EditText json=Editors.field(a,form,"坐标为相对画面的 left,top,right,bottom（0–1）。先填唯一玩家名 → 0–7 编号。商店:shop.0…4；棋盘:board.0.hero / .star / .equipment。只填实际可见区域。",a.getSharedPreferences("capture_profile",0).getString("json",CaptureProfile.EXAMPLE),true);
-  ScrollView scroll=new ScrollView(a);scroll.addView(form);AlertDialog d=new AlertDialog.Builder(a).setTitle("校准截图布局（没有通用官方模板）").setView(scroll).setNegativeButton("取消",null).setPositiveButton("保存",null).create();d.show();d.getButton(-1).setOnClickListener(v->{try{new CaptureProfile(Editors.value(json));
+  ScrollView scroll=new ScrollView(a);scroll.addView(form);AlertDialog d=new AlertDialog.Builder(a).setTitle("校准截图布局（没有通用官方模板）").setView(scroll).setNegativeButton("取消",null).setNeutralButton("套用商店截图示例",null).setPositiveButton("保存",null).create();d.show();
+  d.getButton(-3).setOnClickListener(v->{json.setText(CaptureProfile.SHOP_PRESET_1536);Toast.makeText(a,"已填入1536×695商店示例：需要核对布局、英雄名单及玩家身份",Toast.LENGTH_LONG).show();});d.getButton(-1).setOnClickListener(v->{try{new CaptureProfile(Editors.value(json));
    a.stopService(new Intent(a,CaptureService.class));if(!a.getSharedPreferences("capture_profile",0).edit().putString("json",Editors.value(json)).putBoolean("configured",true).commit())throw new IOException("保存失败");d.dismiss();Toast.makeText(a,"布局已保存，需重新授权开始识别",Toast.LENGTH_LONG).show();
   }catch(Exception e){Toast.makeText(a,e.getMessage(),Toast.LENGTH_LONG).show();}});
+ }
+ /** Optional explicit association for shops where the player label is hidden by the shop UI. */
+ public static void shopOwner(Activity a){
+  String[] choices=new String[9];choices[0]="不绑定（必须从截图识别玩家名）";
+  for(int i=0;i<8;i++)choices[i+1]="当前商店属于玩家"+(i+1)+"（只关联五格商店）";
+  new AlertDialog.Builder(a).setTitle("绑定当前商店玩家")
+   .setMessage("商店打开时玩家名常被遮挡。绑定只影响商店观察，不会读取或覆盖金币、等级、血量及棋盘数据。换观察对象前需要手动更新，未绑定时无法自动归属。")
+   .setItems(choices,(dialog,index)->{
+    try{
+     android.content.SharedPreferences p=a.getSharedPreferences("capture_profile",0);
+     JSONObject json=new JSONObject(p.getString("json",CaptureProfile.EXAMPLE));
+     json.put("shopOwner",index-1);
+     new CaptureProfile(json.toString());
+     a.stopService(new Intent(a,CaptureService.class));
+     if(!p.edit().putString("json",json.toString()).putBoolean("configured",true).commit())throw new IOException("保存失败");
+     Toast.makeText(a,"商店归属已更新，请重新开始授权采集",Toast.LENGTH_LONG).show();
+    }catch(Exception e){Toast.makeText(a,"无法保存："+e.getMessage(),Toast.LENGTH_LONG).show();}
+   }).setNegativeButton("取消",null).show();
  }
  public static void template(Activity a,Uri uri){
   try{
