@@ -50,7 +50,7 @@ public final class GameState implements Serializable {
         if(heroes.size()>500)throw new IllegalArgumentException("英雄数量过多");
         for(Map.Entry<String,Hero> e:heroes.entrySet()){
             Hero h=e.getValue();
-            if(!e.getKey().equals(h.id)||h.id.isEmpty()||h.name.trim().isEmpty()||h.cost<0||h.cost>5||h.total<0||h.total>10000)throw new IllegalArgumentException("英雄规则无效");
+            if(!e.getKey().equals(h.id)||h.id.isEmpty()||h.name.trim().isEmpty()||h.cost<0||h.cost>7||h.total<0||h.total>10000)throw new IllegalArgumentException("英雄规则无效");
         }
         for(Player p:players){
             if(p.level<0||p.level>11||p.gold<0||p.gold>10000||p.hp<0||p.hp>1000)throw new IllegalArgumentException("等级 0–11、金币 0–10000、血量 0–1000；0 级表示未知");
