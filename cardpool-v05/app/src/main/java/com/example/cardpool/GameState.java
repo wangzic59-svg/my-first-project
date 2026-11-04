@@ -102,5 +102,15 @@ public final class GameState implements Serializable {
         }return b.toString();
     }
     public String poolText(){StringBuilder b=new StringBuilder(season+"\n仅按手动及启用的可见棋盘下界估算；历史可能过期，未见备战席未扣除\n");
-        for(Hero h:heroes.values()){int n=observed(h.id);b.append(h.name).append(" · ").append(h.cost==0?"费用待配置":h.cost+"费").append("\n已观察 ").append(n).append(" / 总量 ").append(h.total).append(" · 估算剩余 ").append(Math.max(0,h.total-n));if(n>h.total)b.append(" ⚠ 观察超过卡池，预测不可用");b.append("\n");}return b.toString();}
+        for(Hero h:heroes.values()){
+            int n=observed(h.id);
+            b.append(h.name).append(" · ").append(h.cost==0?"费用待配置":h.cost+"费").append("\n已观察 ").append(n);
+            if(h.total<=0)b.append(" / 总量未核实 · 剩余不可计算");
+            else{
+                b.append(" / 总量 ").append(h.total).append(" · 估算剩余 ").append(Math.max(0,h.total-n));
+                if(n>h.total)b.append(" ⚠ 观察超过卡池，预测不可用");
+            }
+            b.append("\n");
+        }
+        return b.toString();}
 }
