@@ -66,13 +66,16 @@ public final class DataManager {
                 }
                 p.values.put(key,new CaptureData.Value(t.text,t.confidence,frame.time));good++;
             }
+            // Only a complete five-slot shop, accepted in the same high-confidence frame,
+            // contributes one observed shop state. Partial/uncertain OCR never logs a change.
+            boolean shopChanged=ShopTimeline.record(next,frame,accepted);
             java.util.List<GameState.Holding> visible=new java.util.ArrayList<>();
             for(Map.Entry<String,ObservationGate.Token> e:accepted.entrySet())if(e.getKey().matches("board\\.[0-9]+\\.hero")&&e.getValue().confidence>=ObservationGate.MIN&&next.heroes.containsKey(e.getValue().text)){
                 String prefix=e.getKey().substring(0,e.getKey().length()-4);ObservationGate.Token star=accepted.get(prefix+"star");
                 if(star!=null&&star.confidence>=ObservationGate.MIN&&star.text.matches("[123]")){ObservationGate.Token equipment=accepted.get(prefix+"equipment");visible.add(new GameState.Holding(e.getValue().text,Integer.parseInt(star.text),1,equipment==null?"":equipment.text));}
             }
             if(!visible.isEmpty()){p.board.clear();p.board.addAll(visible);p.boardSeen=frame.time;}
-            data.lastReview="玩家"+(frame.player+1)+" · 本帧字段 "+frame.fields.size()+" · 双帧高置信确认 "+good+"；低分/未稳定项未覆盖";
+            data.lastReview="玩家"+(frame.player+1)+" · 本帧字段 "+frame.fields.size()+" · 双帧高置信确认 "+good+(shopChanged?"；记录一组新五格商店":"")+"；低分/未稳定项未覆盖";
             // Raw uncertain candidates are review-only, never effective player statistics.
             for(Map.Entry<String,ObservationGate.Token> e:frame.fields.entrySet())if(!accepted.containsKey(e.getKey()))data.lastReview+="\n待确认 "+e.getKey()+"="+e.getValue().text+String.format(java.util.Locale.ROOT," (%.1f%%)",e.getValue().confidence*100);
         }
