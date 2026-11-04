@@ -4,6 +4,7 @@ public final class Prediction {
     public static String explain(GameState s){try{
         s.validate();
         if(!s.rosterComplete) return "预测不可用：请在赛季规则中配置完整英雄名单，并确认同费分母完整。";
+        if(!SeasonAudit.totalsKnown(s)) return "预测不可用：存在未核实的英雄总张数、费用或观察超额。请先核实全套卡池数据。";
         GameState.Hero target=s.heroes.get(s.target);if(target==null||target.cost==0)return "预测不可用：请选择目标英雄并配置费用。";
         int level=s.players[s.selectedPlayer].level;if(level==0)return "预测不可用：该玩家等级未知。";
         double sum=0;for(double x:s.odds[level])sum+=x;if(Math.abs(sum-1)>1e-8)return "预测不可用：该等级的刷新概率未配置。";
