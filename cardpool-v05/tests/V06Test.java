@@ -7,6 +7,10 @@ public class V06Test {
   int[] large=CaptureDimensions.fit(3840,2160);ok(large[0]==1920&&large[1]==1080,"4K capture bounded");int[] portrait=CaptureDimensions.fit(1080,2400);ok(portrait[0]==864&&portrait[1]==1920,"portrait preserves aspect");ok(CaptureDimensions.fit(640,360)[0]==640,"small capture not upscaled");boolean invalidDimensions=false;try{CaptureDimensions.fit(0,100);}catch(IllegalArgumentException e){invalidDimensions=true;}ok(invalidDimensions,"invalid capture dimensions rejected");
   ObservationGate gate=new ObservationGate();ok(gate.accepted(f(0,1,"gold","50",.99)).isEmpty(),"single frame waits");ok(gate.accepted(f(0,2,"gold","50",.99)).size()==1,"stable two frames");
   ok(gate.accepted(f(1,3,"gold","50",.99)).isEmpty(),"switch identity waits");ok(gate.accepted(f(1,4,"gold","50",.5)).isEmpty(),"low confidence rejected");ok(gate.accepted(f(1,5,"gold","50",.99)).isEmpty(),"low confidence breaks agreement");ok(gate.accepted(f(1,6,"gold","50",.99)).size()==1,"reconfirmed");
+  ObservationGate shopGate=new ObservationGate();
+  ok(shopGate.accepted(f(2,10,"shop.0","ahri",.99)).isEmpty(),"shop needs two consecutive frames");
+  ok(shopGate.accepted(f(2,11,"shop.0","ahri",.99)).containsKey("shop.0"),"stable shop candidate confirmed");
+  ok(shopGate.accepted(f(2,12,"shop.0","未匹配：阿狸",0)).isEmpty(),"unmatched shop candidate never confirmed");
   ObservationGate.Frame ambiguous=f(1,7,"gold","99",.99);ambiguous.identityConfidence=.5;ok(gate.accepted(ambiguous).isEmpty(),"ambiguous identity never overwrites");ok(gate.accepted(f(1,6,"gold","50",.99)).isEmpty(),"out of order rejected");
   ok(ObservationGate.scalar("level","12")==null,"level range");ok(ObservationGate.scalar("gold","5O")==null,"no digit hallucination");ok(ObservationGate.scalar("hp","100")==100,"valid numeric");ok(ObservationGate.scalar("level","0")==null,"unknown level not observed");
   Map<String,String> aliases=new LinkedHashMap<>();aliases.put("Alice","0");aliases.put("A lice","1");ok(ObservationGate.exact("Alice",aliases)==null,"ambiguous normalized alias rejected");
