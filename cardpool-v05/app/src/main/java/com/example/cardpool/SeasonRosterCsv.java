@@ -44,7 +44,7 @@ public final class SeasonRosterCsv {
    String id=fields.get(0),title=fields.get(1);
    if(!id.matches("[A-Za-z0-9_.-]{1,64}")||title.isEmpty()||title.length()>64)throw new IllegalArgumentException("第"+(n+1)+"行英雄ID或名称不合法");
    int cost,total;try{cost=Integer.parseInt(fields.get(2));total=Integer.parseInt(fields.get(3));}catch(NumberFormatException e){throw new IllegalArgumentException("第"+(n+1)+"行费用或总张数不是整数");}
-   if(cost<1||cost>5||total<0||total>10000)throw new IllegalArgumentException("第"+(n+1)+"行费用应为1–5，总张数应为0–10000");
+   if(cost<1||cost>7||total<0||total>10000)throw new IllegalArgumentException("第"+(n+1)+"行费用应为1–7，总张数应为0–10000");
    if(heroes.containsKey(id))throw new IllegalArgumentException("第"+(n+1)+"行英雄ID重复："+id);
    if(!normalizedNames.add(title.replaceAll("\\s+","")))throw new IllegalArgumentException("第"+(n+1)+"行英雄名称重复："+title);
    heroes.put(id,new GameState.Hero(id,title,cost,total));if(total==0)missing++;
