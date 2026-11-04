@@ -12,12 +12,13 @@ public class V06Test {
   ok(shopGate.accepted(f(2,11,"shop.0","ahri",.99)).containsKey("shop.0"),"stable shop candidate confirmed");
   ok(shopGate.accepted(f(2,12,"shop.0","未匹配：阿狸",0)).isEmpty(),"unmatched shop candidate never confirmed");
   SeasonRosterCsv.Parsed csv=SeasonRosterCsv.parse("# season=测试赛季\nid,name,cost,total\nahri,阿狸,4,0\nshen,慎,1,29\n");
-  String huazhiling=Files.readString(Path.of("app/src/main/assets/season_profiles/jcc_huazhiling_2026_normal_candidate.csv"));
-  SeasonRosterCsv.Parsed candidate=SeasonRosterCsv.parse(huazhiling);
+  String helperRoster=Files.readString(Path.of("app/src/main/assets/season_profiles/jcc_helper_set16_unverified.csv"));
+  SeasonRosterCsv.Parsed candidate=SeasonRosterCsv.parse(helperRoster);
   int[] costCounts=new int[6];for(GameState.Hero hero:candidate.heroes.values())costCounts[hero.cost]++;
-  ok(candidate.heroes.size()==59,"Huazhiling candidate OCR roster has 59 entries");
-  ok(Arrays.equals(costCounts,new int[]{0,13,13,13,12,8}),"candidate roster cost buckets");
-  ok(candidate.missingTotals==59,"candidate roster has no fabricated pool totals");
+  ok(candidate.heroes.size()==114,"helper Set16 roster has 114 deduplicated entries");
+  ok(Arrays.equals(costCounts,new int[]{0,14,20,23,28,29}),"helper Set16 roster cost buckets");
+  ok(candidate.heroes.containsKey("11402")&&candidate.heroes.get("11402").name.equals("慎"),"original helper hero ids retained");
+  ok(candidate.missingTotals==114,"helper roster has no invented pool totals");
 
   ok(csv.heroes.size()==2&&csv.missingTotals==1,"CSV roster parses heroes and flags unknown totals");
   GameState imported=new GameState();SeasonRosterCsv.apply(imported,csv);
