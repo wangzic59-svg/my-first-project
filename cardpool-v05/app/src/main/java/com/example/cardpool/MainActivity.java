@@ -19,7 +19,7 @@ public class MainActivity extends Activity implements DataManager.Listener {
     private final Handler handler=new Handler(Looper.getMainLooper());
     @Override public void onCreate(Bundle b){super.onCreate(b);try{manager=DataManager.get(this);}catch(Exception e){TextView t=new TextView(this);t.setText(e.getMessage()+"\n未覆盖原始数据，请先备份应用数据后排查。");setContentView(t);return;}
         LinearLayout root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setFitsSystemWindows(true);root.setPadding(dp(16),dp(20),dp(16),dp(8));root.setBackgroundColor(Color.rgb(13,25,40));setContentView(root);
-        TextView title=text("金铲铲卡池助手 V0.6.2",23);root.addView(title);status=text("",13);root.addView(status);
+        TextView title=text("金铲铲卡池助手 V0.6.3 · 传奇normal",23);root.addView(title);status=text("",13);root.addView(status);
         LinearLayout tabs=new LinearLayout(this);root.addView(tabs);String[] labels={"八人数据","卡池统计","商店预测","采集"};for(int i=0;i<4;i++){final int n=i;button(tabs,labels[i],()->{tab=n;render();});}
         ScrollView scroll=new ScrollView(this);root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));body=new LinearLayout(this);body.setOrientation(LinearLayout.VERTICAL);scroll.addView(body);
         LinearLayout actions=new LinearLayout(this);root.addView(actions);button(actions,"开启悬浮窗",this::startOverlay);button(actions,"关闭",()->stopService(new Intent(this,OverlayService.class)));
@@ -43,7 +43,7 @@ public class MainActivity extends Activity implements DataManager.Listener {
                 for(GameState.Holding h:p.units)detail.append(s.heroes.get(h.hero).name).append(" ").append(h.star).append("★ ×").append(h.count).append(" · ").append(h.equipment).append("\n");
                 detail.append("阵容：").append(p.lineup).append("\n装备：").append(p.equipment);body.addView(text(detail.toString(),14));
             }
-        }else if(tab==1){action("载入辅助APK原始Set16名单（仅OCR，赛季未核实）",this::importHelperSet16Candidate);action("从CSV文件导入赛季英雄名单",this::pickRoster);action("配置赛季完整卡池与刷新规则",()->Editors.rules(this,manager));action("编辑目标英雄未归属观察",()->Editors.unknown(this,manager));body.addView(text(SeasonAudit.report(s),14));body.addView(text(s.poolText(),16));}
+        }else if(tab==1){action("导入：英雄联盟传奇普通模式（候选OCR名单）",this::importLegendCandidate);action("从CSV文件导入赛季英雄名单",this::pickRoster);action("配置赛季完整卡池与刷新规则",()->Editors.rules(this,manager));action("编辑目标英雄未归属观察",()->Editors.unknown(this,manager));body.addView(text(SeasonAudit.report(s),14));body.addView(text(s.poolText(),16));}
         else if(tab==2){action("多目标英雄",()->CaptureControls.targets(this,manager));action("选择预测玩家（当前玩家"+(s.selectedPlayer+1)+"）",()->Editors.choosePlayer(this,manager));action("配置刷新规则",()->Editors.rules(this,manager));body.addView(text(CaptureControls.predictions(s),17));body.addView(text("数据来源：手动 / 模拟 / 用户授权截图。实际可见商店与概率预测分开；没有下一轮真实商店接口。无需 ROOT，不访问游戏进程。",13));}
         else {
             action("校准识别区域与8名玩家别名",()->CaptureControls.profile(this));
@@ -62,11 +62,15 @@ public class MainActivity extends Activity implements DataManager.Listener {
             body.addView(text(s.capture.text(System.currentTimeMillis()),14));
         }
     }
-    private void importHelperSet16Candidate(){
-        try(InputStream in=getAssets().open("season_profiles/jcc_helper_set16_unverified.csv");ByteArrayOutputStream out=new ByteArrayOutputStream()){
+    private void importLegendCandidate(){
+        try(InputStream in=getAssets().open("season_profiles/jcc_legend_20261104_normal_candidate.csv");ByteArrayOutputStream out=new ByteArrayOutputStream()){
             byte[] buffer=new byte[8192];int count;while((count=in.read(buffer))!=-1){if(out.size()+count>512000)throw new IOException("候选名单文件过大");out.write(buffer,0,count);}
             SeasonRosterCsv.Parsed parsed=SeasonRosterCsv.parse(new String(out.toByteArray(),StandardCharsets.UTF_8));
-            String message="来源：你上传的第三方辅助APK（Set16 / S18）。\\n未证明这份名单属于画之灵返场普通模式。\\n仅供OCR候选识别，不能作为真实卡池计算依据。\\n英雄："+parsed.heroes.size()+"\\n总张数未知："+parsed.missingTotals+"\\n原有持牌若被新名单遗漏将拒绝导入。";
+            String message="英雄联盟传奇 · 普通模式 normal（候选）\n"
+                +"114条来自你上传的辅助APK的Set16数据；2026年11月4日公告新增5条，共："+parsed.heroes.size()+"条。\n"
+                +"新增棋子的占位ID不代表真实游戏ID。原APK赛季标签有歧义；部分特殊棋子不能视为普通商店棋子。\n"
+                +"解锁英雄和7费机制尚未实现，卡池总张数均未知，不能计算可靠的商店概率。\n"
+                +"导入前会检查已有持牌，避免丢失。";
             new AlertDialog.Builder(this).setTitle("导入候选名单").setMessage(message).setNegativeButton("取消",null).setPositiveButton("导入OCR字典",(d,w)->{
                 try{manager.mutate(state->SeasonRosterCsv.apply(state,parsed));Toast.makeText(this,"候选名单已导入；卡池概率仍禁用",Toast.LENGTH_LONG).show();}
                 catch(Exception e){new AlertDialog.Builder(this).setTitle("导入失败").setMessage(e.getMessage()).setPositiveButton("确定",null).show();}
