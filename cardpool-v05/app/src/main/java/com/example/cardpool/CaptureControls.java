@@ -18,7 +18,7 @@ public final class CaptureControls {
  /** Optional explicit association for shops where the player label is hidden by the shop UI. */
  /** Latest high-confidence confirmed current-shop observations. These are NOT future refresh results. */
  public static String shopSummary(GameState s){
-  StringBuilder out=new StringBuilder("最近确认的当前商店（不是下一轮预知）：\\n");
+  StringBuilder out=new StringBuilder("最近确认的当前商店（不是下一轮预知）：\n");
   boolean any=false;
   long now=System.currentTimeMillis();
   for(int p=0;p<8;p++){
@@ -31,7 +31,7 @@ public final class CaptureControls {
     row.append(k+1).append(":").append(hero==null?v.text:hero.name);
     if(now-v.seen>30000)row.append("(历史)");
    }
-   if(row.length()>0){any=true;out.append("玩家").append(p+1).append("：").append(row).append("\\n");}
+   if(row.length()>0){any=true;out.append("玩家").append(p+1).append("：").append(row).append("\n");}
   }
   if(!any)out.append("暂无双帧确认的英雄。请先配置真实英雄名单、正确区域并验证截图。");
   return out.toString();
