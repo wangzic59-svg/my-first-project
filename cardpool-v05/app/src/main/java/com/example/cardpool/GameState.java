@@ -16,6 +16,7 @@ public final class GameState implements Serializable {
     public final LinkedHashMap<String, Hero> heroes = new LinkedHashMap<>();
     public final Map<String,Integer> unattributed = new HashMap<>();
     public double[][] odds = new double[12][5];
+    public String oddsSource = "未配置"; // Optional; older serialized saves may be null.
     public GameState() { for(int i=0;i<8;i++) players[i]=new Player(); }
     public static final class Player implements Serializable {
         private static final long serialVersionUID=5L;
